@@ -15,7 +15,6 @@ def data_preprocessing_pipeline(data):
     categorical_features = data.select_dtypes(include=['object']).columns
 
     #Handle missing values in numeric features using the KNN technique
-    data[numeric_features] = data[numeric_features].fillna(data[numeric_features].mean())
     data[numeric_features] = handle_missing_values(data[numeric_features])
 
     #Detect and handle outliers in numeric features using IQR
