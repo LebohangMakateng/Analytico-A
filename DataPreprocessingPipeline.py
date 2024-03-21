@@ -10,6 +10,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.impute import KNNImputer
 
 def data_preprocessing_pipeline(data):
+    
     #Identify numeric and categorical features
     numeric_features = data.select_dtypes(include=['float', 'int']).columns
     categorical_features = data.select_dtypes(include=['object']).columns
@@ -27,11 +28,10 @@ def data_preprocessing_pipeline(data):
         data[feature] = np.where((data[feature] < lower_bound) | (data[feature] > upper_bound),
                                 data[feature].mean(), data[feature])
 
-    #Normalize numeric features
+    # Normalize numeric features
     scaler = StandardScaler()
-    scaled_data = scaler.fit_transform(data[numeric_features])
-    data[numeric_features] = scaler.transform(data[numeric_features])
-
+    data[numeric_features] = scaler.fit_transform(data[numeric_features])
+    
     #Handle missing values in categorical features
     data[categorical_features] = data[categorical_features].fillna(data[categorical_features].mode().iloc[0])
 
