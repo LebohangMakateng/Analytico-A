@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import JSONResponse
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.impute import KNNImputer
 import io
 from fastapi.responses import StreamingResponse
+from typing import Dict, Any
 
 app = FastAPI()
 
@@ -39,3 +41,39 @@ async def handle_missing_values_mean(file: UploadFile = File(...)):
     response.headers["Content-Disposition"] = "attachment; filename=processed_data.csv"
 
     return response
+
+@app.post("/detect_missing_values/")
+async def detect_missing_values(file: UploadFile = File(...)):
+    data = read_csv_file(file)
+    
+    # Replace empty strings with NaN
+    data = data.replace(r'^\s*$', pd.NA, regex=True)
+    
+    # Detect missing values
+    missing_values = data.isnull().sum()
+    missing_percentage = (missing_values / len(data)) * 100
+
+    # Prepare the response
+    missing_data = {
+        column: {
+            "count": int(count),
+            "percentage": round(percentage, 2)
+        }
+        for column, (count, percentage) in zip(missing_values.index, zip(missing_values, missing_percentage))
+        if count > 0
+    }
+
+    # Get rows with missing values
+    rows_with_missing = data[data.isnull().any(axis=1)].index.tolist()
+
+    response = {
+        "missing_values_by_column": missing_data,
+        "rows_with_missing_values": rows_with_missing,
+        "total_rows": len(data),
+        "total_columns": len(data.columns)
+    }
+
+    if missing_data:
+        return JSONResponse(content=response)
+    else:
+        return JSONResponse(content={"message": "No missing values found in the data."})
