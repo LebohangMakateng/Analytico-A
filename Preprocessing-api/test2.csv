@@ -1,0 +1,11 @@
+id,name,age,salary,department,hire_date,performance_score
+1,John Doe,30,55000.50,Sales,2020-01-15,4.2
+2,Jane Smith,28,48000.75,Marketing,2019-11-01,3.8
+3,Mike Johnson,,62000.00,Engineering,2018-07-22,4.5
+4,Emily Brown,35,,HR,2017-03-10,4.0
+5,David Lee,42,70000.25,Sales,,4.7
+6,Sarah Wilson,31,53000.50,Marketing,2021-09-05,
+7,,29,51000.00,Engineering,2020-06-18,3.9
+8,Chris Taylor,37,59000.75,,2019-02-28,4.1
+9,Lisa Anderson,33,56000.50,Sales,2018-12-03,4.3
+10,Tom Harris,39,,Engineering,2017-08-14,4.6
