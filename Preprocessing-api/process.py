@@ -2,12 +2,8 @@ from fastapi import FastAPI
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 import pandas as pd
-import numpy as np
-from sklearn.preprocessing import StandardScaler
-from sklearn.impute import KNNImputer
 import io
 from fastapi.responses import StreamingResponse
-from typing import Dict, Any
 
 app = FastAPI()
 
