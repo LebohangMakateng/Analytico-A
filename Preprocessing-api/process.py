@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import JSONResponse
 import pandas as pd
 import io
 from fastapi.responses import StreamingResponse
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 
 app = FastAPI()
 
@@ -47,29 +48,36 @@ async def detect_missing_values(file: UploadFile = File(...)):
     
     # Detect missing values
     missing_values = data.isnull().sum()
-    missing_percentage = (missing_values / len(data)) * 100
 
-    # Prepare the response
-    missing_data = {
-        column: {
-            "count": int(count),
-            "percentage": round(percentage, 2)
-        }
-        for column, (count, percentage) in zip(missing_values.index, zip(missing_values, missing_percentage))
-        if count > 0
-    }
+    # Prepare the data for plotting
+    columns = [col for col, count in zip(missing_values.index, missing_values) if count > 0]
+    counts = [count for count in missing_values if count > 0]
 
-    # Get rows with missing values
-    rows_with_missing = data[data.isnull().any(axis=1)].index.tolist()
+    if not columns:
+        return {"message": "No missing values found in the data."}
 
-    response = {
-        "missing_values_by_column": missing_data,
-        "rows_with_missing_values": rows_with_missing,
-        "total_rows": len(data),
-        "total_columns": len(data.columns)
-    }
+    # Create the bar graph
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.bar(columns, counts)
+    ax.set_title('Count of Missing Values by Column')
+    ax.set_xlabel('Columns')
+    ax.set_ylabel('Count of Missing Values')
+    plt.xticks(rotation=45, ha='right')
+    
+    # Set y-axis to use only integer values
+    ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+    
+    # Add value labels on top of each bar
+    for i, v in enumerate(counts):
+        ax.text(i, v, str(v), ha='center', va='bottom')
 
-    if missing_data:
-        return JSONResponse(content=response)
-    else:
-        return JSONResponse(content={"message": "No missing values found in the data."})
+    plt.tight_layout()
+
+    # Save the plot to a bytes buffer
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    plt.close(fig)
+
+    # Return the image as a streaming response
+    return StreamingResponse(buf, media_type="image/png")
