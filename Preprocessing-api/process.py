@@ -1,10 +1,14 @@
-from fastapi import FastAPI
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
+from fastapi.templating import Jinja2Templates
 import pandas as pd
 import io
+import math
 from fastapi.responses import StreamingResponse
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+import json
+import numpy as np
 
 app = FastAPI()
 
@@ -19,6 +23,54 @@ def read_csv_file(file: UploadFile):
         return data
     else:
         raise HTTPException(status_code=400, detail="Invalid file format. Please upload a CSV file.")
+
+# Set up Jinja2 templates
+templates = Jinja2Templates(directory="templates")
+
+@app.post("/display_csv_data_html/")
+async def display_csv_data(
+    request: Request,
+    file: UploadFile = File(...),
+    page: int = Query(1, description="Page number", ge=1),
+    rows_per_page: int = Query(10, description="Rows per page", ge=1, le=100)
+):
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="Only CSV files are allowed")
+
+    try:
+        contents = await file.read()
+        data = pd.read_csv(io.StringIO(contents.decode('utf-8')))
+
+        # Calculate pagination
+        total_rows = len(data)
+        total_pages = math.ceil(total_rows / rows_per_page)
+        start_row = (page - 1) * rows_per_page
+        end_row = start_row + rows_per_page
+
+        # Get the data for the current page
+        page_data = data.iloc[start_row:end_row]
+
+        # Convert the DataFrame to an HTML table
+        html_table = page_data.to_html(classes=['table', 'table-striped', 'table-hover'], index=False)
+
+        # Prepare context for the template
+        context = {
+            "request": request,
+            "table": html_table,
+            "page": page,
+            "total_pages": total_pages,
+            "rows_per_page": rows_per_page,
+            "start_row": start_row + 1,
+            "end_row": min(end_row, total_rows),
+            "total_rows": total_rows
+        }
+
+        # Render the template
+        return templates.TemplateResponse("csv_display.html", context)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
     
 @app.post("/handle_missing_values_mean/")
 async def handle_missing_values_mean(file: UploadFile = File(...)):
