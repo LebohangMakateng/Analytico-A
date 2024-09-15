@@ -16,7 +16,7 @@ app = FastAPI()
 #FastAPI automatically generates interactive API documentation. 
 # You can access it at http://127.0.0.1:8000/docs to explore your API and test the endpoints.
 
-# Utility function to read CSV file
+# region Utility function to read CSV file
 def read_csv_file(file: UploadFile):
     if file.filename.endswith('.csv'):
         content = file.file.read().decode("utf-8")
@@ -24,7 +24,9 @@ def read_csv_file(file: UploadFile):
         return data
     else:
         raise HTTPException(status_code=400, detail="Invalid file format. Please upload a CSV file.")
+# endregion
 
+# region return panda info() 
 def generate_info_table(df):
     buffer = StringIO()
     buffer.write(f"<class 'pandas.core.frame.DataFrame'>\n")
@@ -59,9 +61,12 @@ async def return_data_info(file: UploadFile = File(...)):
 
     except Exception as e:
         return PlainTextResponse(content=f"An error occurred: {str(e)}", status_code=500)
+#endregion
 
+# region Dispaly data in a html table
 # Set up Jinja2 templates
 templates = Jinja2Templates(directory="templates")
+
 
 @app.post("/display_csv_data_html/")
 async def display_csv_data(
@@ -106,8 +111,9 @@ async def display_csv_data(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+# endregion
 
-    
+# region handle missing values using mean option
 @app.post("/handle_missing_values_mean/")
 async def handle_missing_values_mean(file: UploadFile = File(...)):
     data = read_csv_file(file)
@@ -126,7 +132,9 @@ async def handle_missing_values_mean(file: UploadFile = File(...)):
     response.headers["Content-Disposition"] = "attachment; filename=processed_data.csv"
 
     return response
+#endregion
 
+# region Detect missing values and return them in a bar graph
 @app.post("/detect_missing_values/")
 async def detect_missing_values(file: UploadFile = File(...)):
     data = read_csv_file(file)
@@ -169,3 +177,4 @@ async def detect_missing_values(file: UploadFile = File(...)):
 
     # Return the image as a streaming response
     return StreamingResponse(buf, media_type="image/png")
+# endregion
