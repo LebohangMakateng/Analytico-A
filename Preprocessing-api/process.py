@@ -1,8 +1,9 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import PlainTextResponse
 from fastapi.templating import Jinja2Templates
 import pandas as pd
 import io
+from io import StringIO
 import math
 from fastapi.responses import StreamingResponse
 import matplotlib.pyplot as plt
@@ -23,6 +24,41 @@ def read_csv_file(file: UploadFile):
         return data
     else:
         raise HTTPException(status_code=400, detail="Invalid file format. Please upload a CSV file.")
+
+def generate_info_table(df):
+    buffer = StringIO()
+    buffer.write(f"<class 'pandas.core.frame.DataFrame'>\n")
+    buffer.write(f"RangeIndex: {len(df)} entries, 0 to {len(df)-1}\n")
+    buffer.write(f"Data columns (total {len(df.columns)} columns):\n")
+    buffer.write(" #   Column    Non-Null Count  Dtype  \n")
+    buffer.write("---  ------    --------------  -----  \n")
+    
+    for i, col in enumerate(df.columns):
+        dtype = df[col].dtype
+        non_null_count = df[col].count()
+        buffer.write(f" {i:2}  {col:<10} {non_null_count:5} non-null  {dtype}\n")
+    
+    buffer.write(f"\ndtypes: {', '.join([f'{dtype}({sum(df.dtypes==dtype)})' for dtype in df.dtypes.unique()])}\n")
+    memory_usage = df.memory_usage(deep=True).sum()
+    buffer.write(f"memory usage: {memory_usage / 1024**2:.2f}+ MB\n")
+    
+    return buffer.getvalue()
+
+@app.post("/data_info/")
+async def return_data_info(file: UploadFile = File(...)):
+    try:
+        # Read the CSV file
+        contents = await file.read()
+        data = pd.read_csv(io.StringIO(contents.decode('utf-8')))
+
+        # Generate the info table
+        info_table = generate_info_table(data)
+
+        # Return the info table as plain text
+        return PlainTextResponse(content=info_table)
+
+    except Exception as e:
+        return PlainTextResponse(content=f"An error occurred: {str(e)}", status_code=500)
 
 # Set up Jinja2 templates
 templates = Jinja2Templates(directory="templates")
