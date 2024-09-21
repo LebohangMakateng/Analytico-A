@@ -8,8 +8,9 @@ import math
 from fastapi.responses import StreamingResponse
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-import json
-import numpy as np
+from typing import List, Dict
+from pydantic import BaseModel
+import csv
 
 app = FastAPI()
 
@@ -26,88 +27,54 @@ def read_csv_file(file: UploadFile):
         raise HTTPException(status_code=400, detail="Invalid file format. Please upload a CSV file.")
 # endregion
 
-# region return panda info() 
-def generate_info_table(df):
-    buffer = StringIO()
-    buffer.write(f"<class 'pandas.core.frame.DataFrame'>\n")
-    buffer.write(f"RangeIndex: {len(df)} entries, 0 to {len(df)-1}\n")
-    buffer.write(f"Data columns (total {len(df.columns)} columns):\n")
-    buffer.write(" #   Column    Non-Null Count  Dtype  \n")
-    buffer.write("---  ------    --------------  -----  \n")
-    
-    for i, col in enumerate(df.columns):
-        dtype = df[col].dtype
-        non_null_count = df[col].count()
-        buffer.write(f" {i:2}  {col:<10} {non_null_count:5} non-null  {dtype}\n")
-    
-    buffer.write(f"\ndtypes: {', '.join([f'{dtype}({sum(df.dtypes==dtype)})' for dtype in df.dtypes.unique()])}\n")
-    memory_usage = df.memory_usage(deep=True).sum()
-    buffer.write(f"memory usage: {memory_usage / 1024**2:.2f}+ MB\n")
-    
-    return buffer.getvalue()
-
-@app.post("/data_info/")
-async def return_data_info(file: UploadFile = File(...)):
+# region statistical summary
+@app.post("/describe_csv",
+          summary = 'Statistics for Numerical Variables' )
+async def describe_csv(file: UploadFile = File(...)):
     try:
-        # Read the CSV file
-        contents = await file.read()
-        data = pd.read_csv(io.StringIO(contents.decode('utf-8')))
-
-        # Generate the info table
-        info_table = generate_info_table(data)
-
-        # Return the info table as plain text
-        return PlainTextResponse(content=info_table)
-
+        data = read_csv_file(file)
+        desc = data.describe().T
+        
+        # Convert the DataFrame to a Markdown table
+        markdown_table = desc.to_markdown()
+        
+        return PlainTextResponse(content=markdown_table)
+    
     except Exception as e:
-        return PlainTextResponse(content=f"An error occurred: {str(e)}", status_code=500)
+        raise HTTPException(status_code=400, detail=str(e))
 #endregion
 
-# region Dispaly data in a html table
-# Set up Jinja2 templates
-templates = Jinja2Templates(directory="templates")
-
-
-@app.post("/display_csv_data_html/")
-async def display_csv_data(
-    request: Request,
-    file: UploadFile = File(...),
-    page: int = Query(1, description="Page number", ge=1),
-    rows_per_page: int = Query(10, description="Rows per page", ge=1, le=100)
-):
+# region csv to excel
+@app.post("/csv_to_excel/")
+async def csv_to_excel(file: UploadFile = File(...)):
     if not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="Only CSV files are allowed")
 
     try:
         contents = await file.read()
-        data = pd.read_csv(io.StringIO(contents.decode('utf-8')))
+        df = pd.read_csv(io.StringIO(contents.decode('utf-8')))
 
-        # Calculate pagination
-        total_rows = len(data)
-        total_pages = math.ceil(total_rows / rows_per_page)
-        start_row = (page - 1) * rows_per_page
-        end_row = start_row + rows_per_page
+        # Create a BytesIO object to store the Excel file
+        excel_file = io.BytesIO()
 
-        # Get the data for the current page
-        page_data = data.iloc[start_row:end_row]
+        # Write the DataFrame to the Excel file
+        with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
+            df.to_excel(writer, sheet_name='Data', index=False)
 
-        # Convert the DataFrame to an HTML table
-        html_table = page_data.to_html(classes=['table', 'table-striped', 'table-hover'], index=False)
+        # Seek to the beginning of the BytesIO object
+        excel_file.seek(0)
 
-        # Prepare context for the template
-        context = {
-            "request": request,
-            "table": html_table,
-            "page": page,
-            "total_pages": total_pages,
-            "rows_per_page": rows_per_page,
-            "start_row": start_row + 1,
-            "end_row": min(end_row, total_rows),
-            "total_rows": total_rows
-        }
+        # Generate the filename for the Excel file
+        excel_filename = file.filename.rsplit('.', 1)[0] + '.xlsx'
 
-        # Render the template
-        return templates.TemplateResponse("csv_display.html", context)
+        # Return the Excel file as a streaming response
+        return StreamingResponse(
+            excel_file,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": f"attachment; filename={excel_filename}"
+            }
+        )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
@@ -135,7 +102,9 @@ async def handle_missing_values_mean(file: UploadFile = File(...)):
 #endregion
 
 # region Detect missing values and return them in a bar graph
-@app.post("/detect_missing_values/")
+@app.post("/detect_missing_values/",
+          summary="Count of missing values in Bar Graph")
+
 async def detect_missing_values(file: UploadFile = File(...)):
     data = read_csv_file(file)
     
@@ -178,3 +147,7 @@ async def detect_missing_values(file: UploadFile = File(...)):
     # Return the image as a streaming response
     return StreamingResponse(buf, media_type="image/png")
 # endregion
+
+
+
+
