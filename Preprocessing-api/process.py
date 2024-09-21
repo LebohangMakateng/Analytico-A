@@ -1,16 +1,10 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Request
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import PlainTextResponse
-from fastapi.templating import Jinja2Templates
 import pandas as pd
 import io
-from io import StringIO
-import math
 from fastapi.responses import StreamingResponse
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-from typing import List, Dict
-from pydantic import BaseModel
-import csv
 
 app = FastAPI()
 
@@ -45,8 +39,8 @@ async def describe_csv(file: UploadFile = File(...)):
 #endregion
 
 # region csv to excel
-@app.post("/csv_to_excel/")
-async def csv_to_excel(file: UploadFile = File(...)):
+@app.post("/csv_to_excel_with_description/")
+async def csv_to_excel_with_description(file: UploadFile = File(...)):
     if not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="Only CSV files are allowed")
 
@@ -57,15 +51,16 @@ async def csv_to_excel(file: UploadFile = File(...)):
         # Create a BytesIO object to store the Excel file
         excel_file = io.BytesIO()
 
-        # Write the DataFrame to the Excel file
+        # Write the DataFrame and its description to the Excel file
         with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
-            df.to_excel(writer, sheet_name='Data', index=False)
+            create_data_sheet(df, writer)
+            create_summary_sheet(df, writer)
 
         # Seek to the beginning of the BytesIO object
         excel_file.seek(0)
 
         # Generate the filename for the Excel file
-        excel_filename = file.filename.rsplit('.', 1)[0] + '.xlsx'
+        excel_filename = file.filename.rsplit('.', 1)[0] + '_with_summary.xlsx'
 
         # Return the Excel file as a streaming response
         return StreamingResponse(
@@ -78,6 +73,35 @@ async def csv_to_excel(file: UploadFile = File(...)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+def create_data_sheet(df: pd.DataFrame, writer: pd.ExcelWriter) -> None:
+    """
+    Create the 'Data' sheet with the full dataset and adjust column widths.
+    """
+    df.to_excel(writer, sheet_name='Data', index=False)
+    worksheet = writer.sheets['Data']
+    
+    for i, col in enumerate(df.columns):
+        max_len = max(
+            df[col].astype(str).map(len).max(),  # max length of column data
+            len(str(col))  # length of column name
+        )
+        worksheet.set_column(i, i, max_len + 2)  # Add a little extra space
+
+def create_summary_sheet(df: pd.DataFrame, writer: pd.ExcelWriter) -> None:
+    """
+    Create the 'Summary' sheet with descriptive statistics and adjust column widths.
+    """
+    summary_df = df.describe().T
+    summary_df.to_excel(writer, sheet_name='Summary')
+    worksheet = writer.sheets['Summary']
+    
+    for i, col in enumerate(summary_df.columns):
+        max_len = max(
+            summary_df[col].astype(str).map(len).max(),  # max length of column data
+            len(str(col))  # length of column name
+        )
+        worksheet.set_column(i, i, max_len + 2)  # Add a little extra space
 # endregion
 
 # region handle missing values using mean option
