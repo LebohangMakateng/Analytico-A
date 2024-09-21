@@ -1,5 +1,4 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import PlainTextResponse
 import pandas as pd
 import io
 from fastapi.responses import StreamingResponse
@@ -10,33 +9,6 @@ app = FastAPI()
 
 #FastAPI automatically generates interactive API documentation. 
 # You can access it at http://127.0.0.1:8000/docs to explore your API and test the endpoints.
-
-# region Utility function to read CSV file
-def read_csv_file(file: UploadFile):
-    if file.filename.endswith('.csv'):
-        content = file.file.read().decode("utf-8")
-        data = pd.read_csv(io.StringIO(content))
-        return data
-    else:
-        raise HTTPException(status_code=400, detail="Invalid file format. Please upload a CSV file.")
-# endregion
-
-# region statistical summary
-@app.post("/describe_csv",
-          summary = 'Statistics for Numerical Variables' )
-async def describe_csv(file: UploadFile = File(...)):
-    try:
-        data = read_csv_file(file)
-        desc = data.describe().T
-        
-        # Convert the DataFrame to a Markdown table
-        markdown_table = desc.to_markdown()
-        
-        return PlainTextResponse(content=markdown_table)
-    
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-#endregion
 
 # region csv to excel
 @app.post("/csv_to_excel_with_description/")
