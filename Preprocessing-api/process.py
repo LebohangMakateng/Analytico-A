@@ -4,6 +4,7 @@ import io
 from fastapi.responses import StreamingResponse
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+from typing import Dict
 
 app = FastAPI()
 
@@ -84,6 +85,56 @@ def create_missing_values_graph(df: pd.DataFrame, writer: pd.ExcelWriter) -> Non
 
     plt.close(fig)
 
+def detect_outliers(df: pd.DataFrame) -> Dict[str, int]:
+    numeric_features = df.select_dtypes(include=['float', 'int']).columns
+    outliers = {}
+    for feature in numeric_features:
+        Q1 = df[feature].quantile(0.25)
+        Q3 = df[feature].quantile(0.75)
+        IQR = Q3 - Q1
+        lower_bound = Q1 - (1.5 * IQR)
+        upper_bound = Q3 + (1.5 * IQR)
+        outliers[feature] = ((df[feature] < lower_bound) | (df[feature] > upper_bound)).sum()
+    return outliers
+
+def create_outlier_graphs(df: pd.DataFrame, writer: pd.ExcelWriter) -> None:
+    outliers = detect_outliers(df)
+
+    # Create a new worksheet
+    worksheet = writer.book.add_worksheet('Outlier Analysis')
+
+    # Create bar chart for outlier counts
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 12))
+
+    features = list(outliers.keys())
+    counts = list(outliers.values())
+
+    ax1.bar(features, counts)
+    ax1.set_title('Count of Outliers by Feature')
+    ax1.set_xlabel('Features')
+    ax1.set_ylabel('Count of Outliers')
+    ax1.tick_params(axis='x', rotation=45)
+    ax1.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+
+    for i, v in enumerate(counts):
+        ax1.text(i, v, str(v), ha='center', va='bottom')
+
+    # Create box plot
+    df.boxplot(column=features, ax=ax2)
+    ax2.set_title('Box Plot of Numeric Features')
+    ax2.set_xlabel('Features')
+    ax2.set_ylabel('Values')
+    ax2.tick_params(axis='x', rotation=45)
+
+    plt.tight_layout()
+
+    # Save the plots to the Excel file
+    imgdata = io.BytesIO()
+    fig.savefig(imgdata, format='png')
+    worksheet.insert_image('A1', '', {'image_data': imgdata})
+
+    plt.close(fig)
+
 @app.post("/csv_to_excel_with_description/")
 async def csv_to_excel_with_description(file: UploadFile = File(...)):
     if not file.filename.endswith('.csv'):
@@ -101,12 +152,13 @@ async def csv_to_excel_with_description(file: UploadFile = File(...)):
             create_data_sheet(df, writer)
             create_summary_sheet(df, writer)
             create_missing_values_graph(df, writer)
+            create_outlier_graphs(df, writer)  # Add this line
 
         # Seek to the beginning of the BytesIO object
         excel_file.seek(0)
 
         # Generate the filename for the Excel file
-        excel_filename = file.filename.rsplit('.', 1)[0] + '_with_summary_and_missing_values.xlsx'
+        excel_filename = file.filename.rsplit('.', 1)[0] + '_with_summary_missing_values_and_outliers.xlsx'
 
         # Return the Excel file as a streaming response
         return StreamingResponse(
