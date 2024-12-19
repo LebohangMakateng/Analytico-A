@@ -8,7 +8,7 @@ from typing import Dict
 
 app = FastAPI()
 
-add #RUN 'fastapi dev process.py' to start server
+#RUN 'fastapi dev process.py' to start server
 #FastAPI automatically generates interactive API documentation. 
 # You can access it at http://127.0.0.1:8000/docs to explore your API and test the endpoints.
 
