@@ -2,8 +2,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.wsgi import WSGIMiddleware
 import dash
-from dash import dcc
-from dash import html
+from dash import dcc, html
 from dash.dependencies import Input, Output
 import io
 import processManager
@@ -13,54 +12,54 @@ import base64
 # Create the FastAPI app
 app = FastAPI()
 
-#RUN 'fastapi dev process.py' to start server
-#FastAPI automatically generates interactive API documentation. 
-# You can access it at http://127.0.0.1:8000/docs to explore your API and test the endpoints.
-
-#docs at: https://fastapi.tiangolo.com/#check-it
-
 # Create the Dash app
 dash_app = dash.Dash(__name__, requests_pathname_prefix='/dash/')
-# Define the layout of the Dash app
-dash_app.layout = html.Div(children=[
-    html.H1(children='Analytico'),
-    dcc.Upload(
-        id='upload-data',
-        children=html.Button('Upload CSV File'),
-        multiple=False
-    ),
-    html.Div(id='output-message'),
-    dcc.Graph(id='missing-values-graph')
-])
 
-# Callback to update the graph based on uploaded file
-@dash_app.callback(
-    [Output('missing-values-graph', 'figure'),
-     Output('output-message', 'children')],
-    [Input('upload-data', 'contents')]
-)
-def update_graph(contents):
-    if contents is None:
-        return {}, "Please upload a CSV file to see the missing values graph."
-    
-    content_type, content_string = contents.split(',')
-    decoded = base64.b64decode(content_string)
-    try:
-        # Read the uploaded CSV file into a DataFrame
-        df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
-    except Exception as e:
-        return {}, f"Error processing file: {str(e)}"
-    
-    # Create the missing values graph
-    imgdata, message = processManager.create_missing_values_graphUi(df)
-    
-    if message:
-        return {}, message
-    
-    # Convert image data to base64 for display
-    encoded_image = base64.b64encode(imgdata.getvalue()).decode()
-    
-    # Update the graph
+# Function to create the summary DataFrame
+def create_summary_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    summary_df = df.describe().T
+    summary_df.reset_index(inplace=True)
+    summary_df.rename(columns={'index': 'Metric'}, inplace=True)
+    return summary_df
+
+# Function to generate an HTML table from a DataFrame
+def generate_html_table(df: pd.DataFrame) -> html.Table:
+    """
+    Generate an HTML table from a DataFrame with horizontal and vertical borders.
+    """
+    table_header = [
+        html.Tr(
+            [html.Th(col, style={'border': '1px solid black', 'padding': '5px', 'textAlign': 'center'}) for col in df.columns]
+        )
+    ]
+    table_body = [
+        html.Tr(
+            [
+                html.Td(df.iloc[i][col], style={'border': '1px solid black', 'padding': '5px', 'textAlign': 'center'})
+                for col in df.columns
+            ]
+        )
+        for i in range(len(df))
+    ]
+
+    return html.Table(
+        children=table_header + table_body,
+        style={
+            'padding-top':'5px',
+            'width': '80%',
+            'margin': '15px',
+            'border': '1px solid black',
+            'borderCollapse': 'collapse',  # Ensures borders don't double up
+        },
+        className='summary-table'
+    )
+
+
+# Function to generate the missing values graph
+def create_missing_values_graph(df: pd.DataFrame) -> dict:
+    """
+    Generate a bar graph showing the count of missing values for each column.
+    """
     return {
         'data': [
             {
@@ -73,17 +72,60 @@ def update_graph(contents):
         'layout': {
             'title': 'Count of Missing Values by Column'
         }
-    }, "Graph of missing values in the uploaded dataset."
+    }
+
+# Define the layout of the Dash app
+dash_app.layout = html.Div(children=[
+    html.H1(children='Analytico'),
+    dcc.Upload(
+        id='upload-data',
+        children=html.Button('Upload CSV File'),
+        multiple=False
+    ),
+    html.Div(id='output-message'),
+    html.Div(id='summary-table-container'),  # Container for the summary table
+    dcc.Graph(id='missing-values-graph')  # The bar graph
+])
+
+# Callback to update the table and graph based on uploaded file
+@dash_app.callback(
+    [
+        Output('missing-values-graph', 'figure'),
+        Output('output-message', 'children'),
+        Output('summary-table-container', 'children')  # For the table
+    ],
+    [Input('upload-data', 'contents')]
+)
+def update_graph_and_table(contents):
+    if contents is None:
+        return {}, "Please upload a CSV file to see the missing values graph and table.", html.Div()
+
+    content_type, content_string = contents.split(',')
+    decoded = base64.b64decode(content_string)
+    try:
+        # Read the uploaded CSV file into a DataFrame
+        df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+    except Exception as e:
+        return {}, f"Error processing file: {str(e)}", html.Div()
+
+    # Create the summary table
+    summary_df = create_summary_dataframe(df)
+    table = generate_html_table(summary_df)
+
+    # Generate the graph
+    graph_figure = create_missing_values_graph(df)
+
+    return graph_figure, "Graph of missing values in the uploaded dataset.", table
 
 # Mount the Dash app on a specific route
 app.mount("/dash", WSGIMiddleware(dash_app.server))
+
 
 @app.get("/")
 def read_root():
     return {"message": "Welcome to Analytico!"}
 
-
-# FAST API Endpoints
+#Region FAST API Endpoints
 @app.post("/csv_to_excel_with_description/")
 async def csv_to_excel_with_description(file: UploadFile = File(...)):
     if not file.filename.endswith('.csv'):
@@ -120,7 +162,7 @@ async def csv_to_excel_with_description(file: UploadFile = File(...)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
-# endregion
+#endregion
 
 
 

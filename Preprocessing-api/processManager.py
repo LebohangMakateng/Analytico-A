@@ -168,3 +168,12 @@ def create_missing_values_graphUi(df: pd.DataFrame):
     plt.close(fig)
     
     return imgdata, None
+
+def create_summary_dataframeUi(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Create a summary DataFrame with descriptive statistics.
+    """
+    summary_df = df.describe().T  # Transpose to match the format
+    summary_df.reset_index(inplace=True)  # Reset index to make 'index' a column
+    summary_df.rename(columns={'index': 'Metric'}, inplace=True)  # Rename index column
+    return summary_df
