@@ -76,13 +76,16 @@ def create_missing_values_graph(df: pd.DataFrame) -> dict:
 
 # Define the layout of the Dash app
 dash_app.layout = html.Div(children=[
-    html.H1(children='Analytico'),
-    dcc.Upload(
-        id='upload-data',
-        children=html.Button('Upload CSV File'),
-        multiple=False
-    ),
-    html.Div(id='output-message'),
+    html.H1(children='Analytico', 
+            style={'textAlign': 'center', 'marginBottom': '50px'}),
+    html.Div(
+        dcc.Upload(
+            id='upload-data',
+            children=html.Button('Upload CSV File'),
+            multiple=False
+        ),
+        style={'textAlign': 'center', 'marginBottom': '50px'}  # Center the upload button
+    ), 
     html.Div(id='summary-table-container'),  # Container for the summary table
     dcc.Graph(id='missing-values-graph')  # The bar graph
 ])
@@ -91,14 +94,13 @@ dash_app.layout = html.Div(children=[
 @dash_app.callback(
     [
         Output('missing-values-graph', 'figure'),
-        Output('output-message', 'children'),
         Output('summary-table-container', 'children')  # For the table
     ],
-    [Input('upload-data', 'contents')]
+    [Input('upload-data', 'contents'),]
 )
 def update_graph_and_table(contents):
     if contents is None:
-        return {}, "Please upload a CSV file to see the missing values graph and table.", html.Div()
+        return {}, html.Div()
 
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
@@ -115,7 +117,7 @@ def update_graph_and_table(contents):
     # Generate the graph
     graph_figure = create_missing_values_graph(df)
 
-    return graph_figure, "Graph of missing values in the uploaded dataset.", table
+    return graph_figure, table
 
 # Mount the Dash app on a specific route
 app.mount("/dash", WSGIMiddleware(dash_app.server))
