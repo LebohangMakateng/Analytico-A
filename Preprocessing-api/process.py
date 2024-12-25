@@ -61,7 +61,7 @@ def generate_html_table(df: pd.DataFrame) -> html.Div:
             'margin': '15px auto',  # Center the table horizontally
             'border': '1px solid black',
             'borderCollapse': 'collapse',
-            'marginBottom':''
+            'marginBottom':'50px'
         },
         className='summary-table'
     )
