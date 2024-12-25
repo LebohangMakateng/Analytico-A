@@ -112,7 +112,11 @@ dash_app.layout = html.Div(children=[
 )
 def update_output(contents, filename):
     if contents is None:
-        return html.Div("No data uploaded yet."), None
+        return html.Div("Please Upload data :)",
+                        style={'textAlign': 'center',
+                               'fontWeight': 'bold',
+                               'fontSize': '20px',
+                               'marginBottom': '10px'}), None
 
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
