@@ -57,7 +57,7 @@ def generate_html_table(df: pd.DataFrame) -> html.Div:
         children=table_header + table_body,
         style={
             'padding-top': '5px',
-            'width': '80%',
+            'width': '60%',
             'margin': '15px auto',  # Center the table horizontally
             'border': '1px solid black',
             'borderCollapse': 'collapse',
@@ -100,7 +100,7 @@ dash_app.layout = html.Div(children=[
         style={'textAlign': 'center', 'marginBottom': '50px'}  
     ), 
     html.Div(id='summary-table-container'),  
-    html.Div(id='missing-values-graph-container')  # Placeholder for the graph
+    html.Div(id='missing-values-graph-container', style={'width': '60%','textAlign': 'center','margin': '0 auto'})  # Center the div horizontally})  # Placeholder for the graph
 ])
 
 # Callback to update the table and graph based on uploaded file
