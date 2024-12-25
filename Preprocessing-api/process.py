@@ -23,10 +23,21 @@ def create_summary_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     return summary_df
 
 # Function to generate an HTML table from a DataFrame
-def generate_html_table(df: pd.DataFrame) -> html.Table:
+def generate_html_table(df: pd.DataFrame) -> html.Div:
     """
-    Generate an HTML table from a DataFrame with horizontal and vertical borders.
+    Generate an HTML table from a DataFrame with horizontal and vertical borders,
+    including a centered title above the table and centering the table itself.
     """
+    table_title = html.Div(
+        "Statistics Summary Table",
+        style={
+            'textAlign': 'center',
+            'fontWeight': 'bold',
+            'fontSize': '20px',
+            'marginBottom': '10px'
+        }
+    )
+
     table_header = [
         html.Tr(
             [html.Th(col, style={'border': '1px solid black', 'padding': '5px', 'textAlign': 'center'}) for col in df.columns]
@@ -42,18 +53,20 @@ def generate_html_table(df: pd.DataFrame) -> html.Table:
         for i in range(len(df))
     ]
 
-    return html.Table(
+    table = html.Table(
         children=table_header + table_body,
         style={
-            'padding-top':'5px',
+            'padding-top': '5px',
             'width': '80%',
-            'margin': '15px',
+            'margin': '15px auto',  # Center the table horizontally
             'border': '1px solid black',
-            'borderCollapse': 'collapse',  # Ensures borders don't double up
+            'borderCollapse': 'collapse',
+            'marginBottom':''
         },
         className='summary-table'
     )
 
+    return html.Div(children=[table_title, table], style={'textAlign': 'center'})
 
 # Function to generate the missing values graph
 def create_missing_values_graph(df: pd.DataFrame) -> dict:
