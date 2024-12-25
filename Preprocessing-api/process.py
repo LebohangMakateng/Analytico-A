@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.middleware.wsgi import WSGIMiddleware
 import dash
 from dash import dcc, html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import io
 import processManager
 import pandas as pd
@@ -97,40 +97,40 @@ dash_app.layout = html.Div(children=[
             children=html.Button('Upload CSV File'),
             multiple=False
         ),
-        style={'textAlign': 'center', 'marginBottom': '50px'}  # Center the upload button
+        style={'textAlign': 'center', 'marginBottom': '50px'}  
     ), 
-    html.Div(id='summary-table-container'),  # Container for the summary table
-    dcc.Graph(id='missing-values-graph')  # The bar graph
+    html.Div(id='summary-table-container'),  
+    html.Div(id='missing-values-graph-container')  # Placeholder for the graph
 ])
 
 # Callback to update the table and graph based on uploaded file
 @dash_app.callback(
-    [
-        Output('missing-values-graph', 'figure'),
-        Output('summary-table-container', 'children')  # For the table
-    ],
-    [Input('upload-data', 'contents'),]
+    [Output('missing-values-graph-container', 'children'),
+     Output('summary-table-container', 'children')],
+    [Input('upload-data', 'contents')],
+    [State('upload-data', 'filename')]
 )
-def update_graph_and_table(contents):
+def update_output(contents, filename):
     if contents is None:
-        return {}, html.Div()
+        return html.Div("No data uploaded yet."), None
 
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
     try:
-        # Read the uploaded CSV file into a DataFrame
         df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
     except Exception as e:
-        return {}, f"Error processing file: {str(e)}", html.Div()
+        return html.Div(f"Error processing file: {str(e)}"), None
+
+    # Generate the graph only if data is available
+    graph = dcc.Graph(
+        figure=create_missing_values_graph(df)
+    )
 
     # Create the summary table
     summary_df = create_summary_dataframe(df)
-    table = generate_html_table(summary_df)
+    summary_table = generate_html_table(summary_df)
 
-    # Generate the graph
-    graph_figure = create_missing_values_graph(df)
-
-    return graph_figure, table
+    return graph, summary_table
 
 # Mount the Dash app on a specific route
 app.mount("/dash", WSGIMiddleware(dash_app.server))
