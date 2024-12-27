@@ -53,10 +53,18 @@ def update_output(contents, filename):
     except Exception as e:
         return html.Div(f"Error processing file: {str(e)}"), None
 
-    # Generate the graph for missing values
-    graph = dcc.Graph(
-        figure=processManager.create_missing_values_graph(df)
-    )
+    # Check if the DataFrame is empty or has no missing values
+    if df.empty or df.isnull().sum().sum() == 0:
+        graph = html.Div("No missing values found in the uploaded file.",
+                         style={'textAlign': 'center',
+                                'fontWeight': 'bold',
+                                'fontSize': '20px',
+                                'marginBottom': '10px'})
+    else:
+        # Generate the graph for missing values
+        graph = dcc.Graph(
+            figure=processManager.create_missing_values_graph(df)
+        )
 
     # Filter numerical columns
     numerical_df = df.select_dtypes(include=['number'])
