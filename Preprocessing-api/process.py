@@ -28,7 +28,14 @@ dash_app.layout = html.Div(children=[
         style={'textAlign': 'center', 'marginBottom': '50px'}  
     ), 
     html.Div(id='summary-table-container'),  
-    html.Div(id='missing-values-graph-container', style={'width': '60%','textAlign': 'center','margin': '0 auto'})  # Center the div horizontally})  # Placeholder for the graph
+    html.Div(id='missing-values-graph-container', style={'width': '60%','textAlign': 'center','margin': '0 auto'}),  # Center the div horizontally})  # Placeholder for the graph
+
+    html.Div(
+        html.Button('Download Excel File', id='download-button', n_clicks=0),
+        style={'textAlign': 'center', 'marginTop': '20px'}
+    ),
+    dcc.Download(id='download-excel')
+
 ])
 
 # Callback to update the table and graph based on uploaded file@dash_app.callback(
