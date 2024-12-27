@@ -31,7 +31,7 @@ dash_app.layout = html.Div(children=[
     html.Div(id='missing-values-graph-container', style={'width': '60%','textAlign': 'center','margin': '0 auto'})  # Center the div horizontally})  # Placeholder for the graph
 ])
 
-# Callback to update the table and graph based on uploaded file
+# Callback to update the table and graph based on uploaded file@dash_app.callback(
 @dash_app.callback(
     [Output('missing-values-graph-container', 'children'),
      Output('summary-table-container', 'children')],
@@ -53,20 +53,30 @@ def update_output(contents, filename):
     except Exception as e:
         return html.Div(f"Error processing file: {str(e)}"), None
 
-    # Generate the graph only if data is available
+    # Generate the graph for missing values
     graph = dcc.Graph(
-        figure= processManager.create_missing_values_graph(df)
+        figure=processManager.create_missing_values_graph(df)
     )
 
-    # Create the summary table
-    summary_df = processManager.create_summary_dataframe(df)
-    summary_table = processManager.generate_html_table(summary_df)
+    # Filter numerical columns
+    numerical_df = df.select_dtypes(include=['number'])
+
+    # Check if numerical_df is empty
+    if numerical_df.empty:
+        summary_table = html.Div("No numerical columns found in the uploaded file.",
+                                 style={'textAlign': 'center',
+                                        'fontWeight': 'bold',
+                                        'fontSize': '20px',
+                                        'marginBottom': '10px'})
+    else:
+        # Create the summary table for numerical columns
+        summary_df = processManager.create_summary_dataframe(numerical_df)
+        summary_table = processManager.generate_html_table(summary_df)
 
     return graph, summary_table
 
 # Mount the Dash app on a specific route
 app.mount("/dash", WSGIMiddleware(dash_app.server))
-
 
 @app.get("/")
 def read_root():
@@ -110,6 +120,3 @@ async def csv_to_excel_with_description(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 #endregion
-
-
-
