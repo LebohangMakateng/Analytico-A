@@ -90,6 +90,38 @@ def update_output(contents, filename):
 
     return graph, summary_table
 
+# Callback to handle the download button click
+@dash_app.callback(
+    Output('download-excel', 'data'),
+    [Input('download-button', 'n_clicks')],
+    [State('upload-data', 'contents'), State('upload-data', 'filename')]
+)
+def download_excel(n_clicks, contents, filename):
+    if n_clicks > 0 and contents is not None:
+        content_type, content_string = contents.split(',')
+        decoded = base64.b64decode(content_string)
+        df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+
+        # Create a BytesIO object to store the Excel file
+        excel_file = io.BytesIO()
+
+        # Write the DataFrame and its description to the Excel file
+        with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
+            processManager.create_data_sheet(df, writer)
+            processManager.create_summary_sheet(df, writer)
+            processManager.create_missing_values_graph(df, writer)
+            processManager.create_outlier_graphs(df, writer)
+
+        # Seek to the beginning of the BytesIO object
+        excel_file.seek(0)
+
+        # Generate the filename for the Excel file
+        excel_filename = filename.rsplit('.', 1)[0] + '_with_summary_missing_values_and_outliers.xlsx'
+
+        return dcc.send_bytes(excel_file.getvalue(), filename=excel_filename)
+
+    return None
+
 # Mount the Dash app on a specific route
 app.mount("/dash", WSGIMiddleware(dash_app.server))
 
