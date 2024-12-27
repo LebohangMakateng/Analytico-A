@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from typing import Dict
 import pandas as pd
+from dash import dcc, html
 
 def create_data_sheet(df: pd.DataFrame, writer: pd.ExcelWriter) -> None:
     """
@@ -177,3 +178,97 @@ def create_summary_dataframeUi(df: pd.DataFrame) -> pd.DataFrame:
     summary_df.reset_index(inplace=True)  # Reset index to make 'index' a column
     summary_df.rename(columns={'index': 'Metric'}, inplace=True)  # Rename index column
     return summary_df
+
+# region: Private methods
+
+# Function to create the summary DataFrame
+def create_summary_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    summary_df = df.describe().T
+    summary_df.reset_index(inplace=True)
+    summary_df.rename(columns={'index': 'Metric'}, inplace=True)
+    return summary_df
+
+# Function to generate an HTML table from a DataFrame
+def generate_html_table(df: pd.DataFrame) -> html.Div:
+    """
+    Generate an HTML table from a DataFrame with horizontal and vertical borders,
+    including a centered title above the table and centering the table itself.
+    """
+    table_title = html.Div(
+        "Statistics Summary Table",
+        style={
+            'textAlign': 'center',
+            'fontWeight': 'bold',
+            'fontSize': '20px',
+            'marginBottom': '10px'
+        }
+    )
+
+    table_header = [
+        html.Tr(
+            [html.Th(col, style={'border': '1px solid black', 'padding': '5px', 'textAlign': 'center'}) for col in df.columns]
+        )
+    ]
+    table_body = [
+        html.Tr(
+            [
+                html.Td(df.iloc[i][col], style={'border': '1px solid black', 'padding': '5px', 'textAlign': 'center'})
+                for col in df.columns
+            ]
+        )
+        for i in range(len(df))
+    ]
+
+    table = html.Table(
+        children=table_header + table_body,
+        style={
+            'padding-top': '5px',
+            'width': '60%',
+            'margin': '15px auto',  # Center the table horizontally
+            'border': '1px solid black',
+            'borderCollapse': 'collapse',
+            'marginBottom':'50px'
+        },
+        className='summary-table'
+    )
+
+    return html.Div(children=[table_title, table], style={'textAlign': 'center'})
+
+# Function to generate the missing values graph
+def create_missing_values_graph(df: pd.DataFrame) -> dict:
+    """
+    Generate a bar graph showing the count of missing values for each column.
+    """
+    return {
+        'data': [
+            {
+                'x': df.columns,
+                'y': df.isnull().sum(),
+                'type': 'bar',
+                'name': 'Missing Values'
+            },
+        ],
+        'layout': {
+            'title': 'Count of Missing Values by Column'
+        }
+    }
+
+# Function to generate the missing values graph
+def create_missing_values_graph(df: pd.DataFrame) -> dict:
+    """
+    Generate a bar graph showing the count of missing values for each column.
+    """
+    return {
+        'data': [
+            {
+                'x': df.columns,
+                'y': df.isnull().sum(),
+                'type': 'bar',
+                'name': 'Missing Values'
+            },
+        ],
+        'layout': {
+            'title': 'Count of Missing Values by Column'
+        }
+    }
+# endregion
