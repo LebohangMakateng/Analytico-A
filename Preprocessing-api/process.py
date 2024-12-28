@@ -4,6 +4,7 @@ from fastapi.middleware.wsgi import WSGIMiddleware
 import dash
 from dash import dcc, html
 from dash.dependencies import Input, Output, State
+import dash_table
 import io
 import processManager
 import pandas as pd
@@ -27,6 +28,7 @@ dash_app.layout = html.Div(children=[
         ),
         style={'textAlign': 'center', 'marginBottom': '50px'}  
     ), 
+    html.Div(id='data-table-container'),  # Container for the DataTable
     html.Div(id='summary-table-container'),  
     html.Div(id='missing-values-graph-container', style={'width': '60%','textAlign': 'center','margin': '0 auto'}),
     dcc.Store(id='data-processed', data=False),  # Store to track if data is processed
@@ -37,9 +39,10 @@ dash_app.layout = html.Div(children=[
     dcc.Download(id='download-excel')
 ])
 
-# Callback to update the table and graph based on uploaded file
+# Callback to update the table and graph based on uploaded file# Callback to update the table and graph based on uploaded file
 @dash_app.callback(
-    [Output('missing-values-graph-container', 'children'),
+    [Output('data-table-container', 'children'),
+     Output('missing-values-graph-container', 'children'),
      Output('summary-table-container', 'children'),
      Output('data-processed', 'data')],
     [Input('upload-data', 'contents')],
@@ -51,14 +54,23 @@ def update_output(contents, filename):
                         style={'textAlign': 'center',
                                'fontWeight': 'bold',
                                'fontSize': '20px',
-                               'marginBottom': '10px'}), None, False
+                               'marginBottom': '10px'}), None, None, False
 
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
     try:
         df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
     except Exception as e:
-        return html.Div(f"Error processing file: {str(e)}"), None, False
+        return html.Div(f"Error processing file: {str(e)}"), None, None, False
+
+    # Create a DataTable for the uploaded data
+    data_table = dash_table.DataTable(
+        data=df.to_dict('records'),
+        columns=[{'name': col, 'id': col} for col in df.columns],
+        page_size=10,  # Adjust the number of rows per page
+        style_table={'overflowX': 'auto'},
+        style_cell={'textAlign': 'left'},
+    )
 
     # Check if the DataFrame is empty or has no missing values
     if df.empty or df.isnull().sum().sum() == 0:
@@ -88,7 +100,7 @@ def update_output(contents, filename):
         summary_df = processManager.create_summary_dataframe(numerical_df)
         summary_table = processManager.generate_data_table(summary_df)
 
-    return graph, summary_table, True
+    return data_table, graph, summary_table, True
 
 # Callback to show the download button only after data is processed
 @dash_app.callback(
