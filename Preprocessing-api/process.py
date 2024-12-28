@@ -28,20 +28,20 @@ dash_app.layout = html.Div(children=[
         style={'textAlign': 'center', 'marginBottom': '50px'}  
     ), 
     html.Div(id='summary-table-container'),  
-    html.Div(id='missing-values-graph-container', style={'width': '60%','textAlign': 'center','margin': '0 auto'}),  # Center the div horizontally})  # Placeholder for the graph
-
+    html.Div(id='missing-values-graph-container', style={'width': '60%','textAlign': 'center','margin': '0 auto'}),
+    dcc.Store(id='data-processed', data=False),  # Store to track if data is processed
     html.Div(
-        html.Button('Download Excel File', id='download-button', n_clicks=0),
+        html.Button('Download Excel File', id='download-button', n_clicks=0, style={'display': 'none'}),
         style={'textAlign': 'center', 'marginTop': '20px'}
     ),
     dcc.Download(id='download-excel')
-
 ])
 
-# Callback to update the table and graph based on uploaded file@dash_app.callback(
+# Callback to update the table and graph based on uploaded file
 @dash_app.callback(
     [Output('missing-values-graph-container', 'children'),
-     Output('summary-table-container', 'children')],
+     Output('summary-table-container', 'children'),
+     Output('data-processed', 'data')],
     [Input('upload-data', 'contents')],
     [State('upload-data', 'filename')]
 )
@@ -51,14 +51,14 @@ def update_output(contents, filename):
                         style={'textAlign': 'center',
                                'fontWeight': 'bold',
                                'fontSize': '20px',
-                               'marginBottom': '10px'}), None
+                               'marginBottom': '10px'}), None, False
 
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
     try:
         df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
     except Exception as e:
-        return html.Div(f"Error processing file: {str(e)}"), None
+        return html.Div(f"Error processing file: {str(e)}"), None, False
 
     # Check if the DataFrame is empty or has no missing values
     if df.empty or df.isnull().sum().sum() == 0:
@@ -88,7 +88,17 @@ def update_output(contents, filename):
         summary_df = processManager.create_summary_dataframe(numerical_df)
         summary_table = processManager.generate_html_table(summary_df)
 
-    return graph, summary_table
+    return graph, summary_table, True
+
+# Callback to show the download button only after data is processed
+@dash_app.callback(
+    Output('download-button', 'style'),
+    [Input('data-processed', 'data')]
+)
+def toggle_download_button(data_processed):
+    if data_processed:
+        return {'display': 'block'}
+    return {'display': 'none'}
 
 # Callback to handle the download button click
 @dash_app.callback(
@@ -109,14 +119,13 @@ def download_excel(n_clicks, contents, filename):
         with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
             processManager.create_data_sheet(df, writer)
             processManager.create_summary_sheet(df, writer)
-            processManager.create_missing_values_graph(df, writer)
-            processManager.create_outlier_graphs(df, writer)
+            processManager.create_missing_values_graph_excel(df, writer)
 
         # Seek to the beginning of the BytesIO object
         excel_file.seek(0)
 
         # Generate the filename for the Excel file
-        excel_filename = filename.rsplit('.', 1)[0] + '_with_summary_missing_values_and_outliers.xlsx'
+        excel_filename = filename.rsplit('.', 1)[0] + '_preprocessed.xlsx'
 
         return dcc.send_bytes(excel_file.getvalue(), filename=excel_filename)
 
@@ -129,7 +138,7 @@ app.mount("/dash", WSGIMiddleware(dash_app.server))
 def read_root():
     return {"message": "Welcome to Analytico!"}
 
-#Region FAST API Endpoints
+# FastAPI endpoint for CSV to Excel conversion
 @app.post("/csv_to_excel_with_description/")
 async def csv_to_excel_with_description(file: UploadFile = File(...)):
     if not file.filename.endswith('.csv'):
@@ -146,8 +155,8 @@ async def csv_to_excel_with_description(file: UploadFile = File(...)):
         with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
             processManager.create_data_sheet(df, writer)
             processManager.create_summary_sheet(df, writer)
-            processManager.create_missing_values_graph(df, writer)
-            processManager.create_outlier_graphs(df, writer)  # Add this line
+            processManager.create_missing_values_graph_excel(df, writer)
+            processManager.create_outlier_graphs(df, writer)
 
         # Seek to the beginning of the BytesIO object
         excel_file.seek(0)
@@ -166,4 +175,3 @@ async def csv_to_excel_with_description(file: UploadFile = File(...)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
-#endregion
