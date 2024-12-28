@@ -86,7 +86,7 @@ def update_output(contents, filename):
     else:
         # Create the summary table for numerical columns
         summary_df = processManager.create_summary_dataframe(numerical_df)
-        summary_table = processManager.generate_html_table(summary_df)
+        summary_table = processManager.generate_data_table(summary_df)
 
     return graph, summary_table, True
 

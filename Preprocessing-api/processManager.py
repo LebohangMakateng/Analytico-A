@@ -150,51 +150,22 @@ def create_summary_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     summary_df.rename(columns={'index': 'Metric'}, inplace=True)
     return summary_df
 
-# Function to generate an HTML table from a DataFrame
-def generate_html_table(df: pd.DataFrame) -> html.Div:
+import dash_table
+
+
+##Function to Generate a Dash DataTable from a DataFrame.
+def generate_data_table(df: pd.DataFrame) -> dash_table.DataTable:
     """
-    Generate an HTML table from a DataFrame with horizontal and vertical borders,
-    including a centered title above the table and centering the table itself.
+    Generate a Dash DataTable from a DataFrame.
     """
-    table_title = html.Div(
-        "Statistics Summary Table",
-        style={
-            'textAlign': 'center',
-            'fontWeight': 'bold',
-            'fontSize': '20px',
-            'marginBottom': '10px'
-        }
+    return dash_table.DataTable(
+        data=df.to_dict('records'),
+        columns=[{'name': col, 'id': col} for col in df.columns],
+        style_table={'overflowX': 'auto', 'margin': '15px auto', 'width': '60%'},
+        style_cell={'textAlign': 'center', 'padding': '5px'},
+        style_header={'fontWeight': 'bold'},
+        page_size=10  # Adjust the number of rows per page
     )
-
-    table_header = [
-        html.Tr(
-            [html.Th(col, style={'border': '1px solid black', 'padding': '5px', 'textAlign': 'center'}) for col in df.columns]
-        )
-    ]
-    table_body = [
-        html.Tr(
-            [
-                html.Td(df.iloc[i][col], style={'border': '1px solid black', 'padding': '5px', 'textAlign': 'center'})
-                for col in df.columns
-            ]
-        )
-        for i in range(len(df))
-    ]
-
-    table = html.Table(
-        children=table_header + table_body,
-        style={
-            'padding-top': '5px',
-            'width': '60%',
-            'margin': '15px auto',  # Center the table horizontally
-            'border': '1px solid black',
-            'borderCollapse': 'collapse',
-            'marginBottom':'50px'
-        },
-        className='summary-table'
-    )
-
-    return html.Div(children=[table_title, table], style={'textAlign': 'center'})
 
 # Function to generate the missing values graph
 def create_missing_values_graph(df: pd.DataFrame) -> dict:
