@@ -91,44 +91,6 @@ def detect_outliers(df: pd.DataFrame) -> Dict[str, int]:
         outliers[feature] = ((df[feature] < lower_bound) | (df[feature] > upper_bound)).sum()
     return outliers
 
-def create_outlier_graphs(df: pd.DataFrame, writer: pd.ExcelWriter) -> None:
-    outliers = detect_outliers(df)
-
-    # Create a new worksheet
-    worksheet = writer.book.add_worksheet('Outlier Analysis')
-
-    # Create bar chart for outlier counts
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 12))
-
-    features = list(outliers.keys())
-    counts = list(outliers.values())
-
-    ax1.bar(features, counts)
-    ax1.set_title('Count of Outliers by Feature')
-    ax1.set_xlabel('Features')
-    ax1.set_ylabel('Count of Outliers')
-    ax1.tick_params(axis='x', rotation=45)
-    ax1.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
-
-    for i, v in enumerate(counts):
-        ax1.text(i, v, str(v), ha='center', va='bottom')
-
-    # Create box plot
-    df.boxplot(column=features, ax=ax2)
-    ax2.set_title('Box Plot of Numeric Features')
-    ax2.set_xlabel('Features')
-    ax2.set_ylabel('Values')
-    ax2.tick_params(axis='x', rotation=45)
-
-    plt.tight_layout()
-
-    # Save the plots to the Excel file
-    imgdata = io.BytesIO()
-    fig.savefig(imgdata, format='png')
-    worksheet.insert_image('A1', '', {'image_data': imgdata})
-
-    plt.close(fig)
-
 # Function to create missing values graph
 def create_missing_values_graphUi(df: pd.DataFrame):
     # Replace empty strings with NaN
@@ -271,4 +233,36 @@ def create_missing_values_graph(df: pd.DataFrame) -> dict:
             'title': 'Count of Missing Values by Column'
         }
     }
-# endregion
+
+def create_missing_values_graph_excel(df: pd.DataFrame, writer: pd.ExcelWriter) -> None:
+    """
+    Create a 'Missing Values' sheet with a bar graph of missing values in an Excel file.
+    """
+    # Your existing code for creating a graph and inserting it into an Excel sheet
+    df = df.replace(r'^\s*$', pd.NA, regex=True)
+    missing_values = df.isnull().sum()
+    columns = [col for col, count in zip(missing_values.index, missing_values) if count > 0]
+    counts = [count for count in missing_values if count > 0]
+
+    if not columns:
+        worksheet = writer.book.add_worksheet('Missing Values')
+        worksheet.write('A1', 'No missing values found in the data.')
+        return
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.bar(columns, counts)
+    ax.set_title('Count of Missing Values by Column')
+    ax.set_xlabel('Columns')
+    ax.set_ylabel('Count of Missing Values')
+    plt.xticks(rotation=45, ha='right')
+    ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+    for i, v in enumerate(counts):
+        ax.text(i, v, str(v), ha='center', va='bottom')
+    plt.tight_layout()
+
+    imgdata = io.BytesIO()
+    fig.savefig(imgdata, format='png')
+    worksheet = writer.book.add_worksheet('Missing Values')
+    worksheet.insert_image('A1', '', {'image_data': imgdata})
+
+    plt.close(fig)
