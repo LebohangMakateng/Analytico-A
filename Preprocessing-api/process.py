@@ -28,9 +28,9 @@ dash_app.layout = html.Div(children=[
         ),
         style={'textAlign': 'center', 'marginBottom': '50px'}  
     ), 
-    html.Div(id='data-table-container'),  # Container for the DataTable
-    html.Div(id='summary-table-container'),  
-    html.Div(id='missing-values-graph-container', style={'width': '60%','textAlign': 'center','margin': '0 auto'}),
+    html.Div(id='data-table-container', style={'width': '80%','textAlign': 'center','margin': '50px auto'}),  # Container for the csv DataTable
+    html.Div(id='summary-table-container', style={'width': '80%','textAlign': 'center','margin': '0 auto'}),  
+    html.Div(id='missing-values-graph-container', style={'width': '80%','textAlign': 'center','margin': '50px auto'}),
     dcc.Store(id='data-processed', data=False),  # Store to track if data is processed
     html.Div(
         html.Button('Download Excel File', id='download-button', n_clicks=0, style={'display': 'none',}),
