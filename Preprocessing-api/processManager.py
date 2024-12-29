@@ -5,6 +5,7 @@ import matplotlib.ticker as ticker
 from typing import Dict
 import pandas as pd
 from dash import dash_table
+import plotly.graph_objs as go
 
 def create_data_sheet(df: pd.DataFrame, writer: pd.ExcelWriter) -> None:
     """
@@ -59,23 +60,34 @@ def generate_data_table(df: pd.DataFrame) -> dash_table.DataTable:
     )
 
 # Function to generate the missing values graph
-def create_missing_values_graph(df: pd.DataFrame) -> dict:
+def create_missing_values_graph(df: pd.DataFrame) -> go.Figure:
     """
-    Generate a bar graph showing the count of missing values for each column.
+    Generate a Plotly bar graph showing the count of missing values for each column.
     """
-    return {
-        'data': [
-            {
-                'x': df.columns,
-                'y': df.isnull().sum(),
-                'type': 'bar',
-                'name': 'Missing Values'
-            },
-        ],
-        'layout': {
-            'title': 'Count of Missing Values by Column'
-        }
-    }
+    missing_counts = df.isnull().sum()
+
+    # Create a bar chart using Plotly
+    fig = go.Figure(data=[
+        go.Bar(
+            x=df.columns,
+            y=missing_counts,
+            name='Missing Values'
+        )
+    ])
+
+    # Update layout to ensure Y-axis uses integer values and set background to white
+    fig.update_layout(
+        title='Count of Missing Values by Column',
+        yaxis=dict(
+            tickmode='linear',
+            tick0=0,
+            dtick=1  # Ensures the Y-axis uses integer values
+        ),
+        plot_bgcolor='white',  # Set plot background to white
+        paper_bgcolor='white'  # Set paper background to white
+    )
+
+    return fig
 
 def create_missing_values_graph_excel(df: pd.DataFrame, writer: pd.ExcelWriter) -> None:
     """
