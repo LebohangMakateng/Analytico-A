@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from typing import Dict
 import pandas as pd
-from dash import dcc, html
+from dash import dash_table
 
 def create_data_sheet(df: pd.DataFrame, writer: pd.ExcelWriter) -> None:
     """
@@ -20,6 +20,7 @@ def create_data_sheet(df: pd.DataFrame, writer: pd.ExcelWriter) -> None:
         )
         worksheet.set_column(i, i, max_len + 2)  # Add a little extra space
 
+#excel
 def create_summary_sheet(df: pd.DataFrame, writer: pd.ExcelWriter) -> None:
     """
     Create the 'Summary' sheet with descriptive statistics and adjust column widths.
@@ -35,24 +36,13 @@ def create_summary_sheet(df: pd.DataFrame, writer: pd.ExcelWriter) -> None:
         )
         worksheet.set_column(i, i, max_len + 2)  # Add a little extra space
 
-def create_summary_dataframeUi(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Create a summary DataFrame with descriptive statistics.
-    """
-    summary_df = df.describe().T  # Transpose to match the format
-    summary_df.reset_index(inplace=True)  # Reset index to make 'index' a column
-    summary_df.rename(columns={'index': 'Metric'}, inplace=True)  # Rename index column
-    return summary_df
-
-# Function to create the summary DataFrame
+# Function to create the summary DataFrame'
+#UI
 def create_summary_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     summary_df = df.describe().T
     summary_df.reset_index(inplace=True)
     summary_df.rename(columns={'index': 'Metric'}, inplace=True)
     return summary_df
-
-import dash_table
-
 
 ##Function to Generate a Dash DataTable from a DataFrame.
 def generate_data_table(df: pd.DataFrame) -> dash_table.DataTable:
