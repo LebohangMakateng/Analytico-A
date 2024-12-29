@@ -113,7 +113,7 @@ def update_output(contents, filename):
 
         # Add the title for the summary table
         summary_table = html.Div([
-            html.H3("Summary Statistics Table", style={'textAlign': 'center','marginBottom':'0px'}),
+            html.H3("Numerical Data Summary Table", style={'textAlign': 'center','marginBottom':'0px'}),
             summary_table_content
         ])
 
