@@ -77,6 +77,12 @@ def update_output(contents, filename):
         style_cell={'textAlign': 'left'},
     )
 
+    # Add the filename as a title above the data table
+    uploaded_data_table = html.Div([
+        html.H3(f"Data Table: {filename}", style={'textAlign': 'center', 'marginBottom':'5px'}),
+        data_table
+    ])
+
     # Check if the DataFrame is empty or has no missing values
     if df.empty or df.isnull().sum().sum() == 0:
         graph = html.Div("No missing values found in the uploaded file.",
@@ -103,9 +109,15 @@ def update_output(contents, filename):
     else:
         # Create the summary table for numerical columns
         summary_df = processManager.create_summary_dataframe(numerical_df)
-        summary_table = processManager.generate_data_table(summary_df)
+        summary_table_content = processManager.generate_data_table(summary_df)
 
-    return data_table, graph, summary_table, True
+        # Add the title for the summary table
+        summary_table = html.Div([
+            html.H3("Summary Statistics Table", style={'textAlign': 'center','marginBottom':'0px'}),
+            summary_table_content
+        ])
+
+    return uploaded_data_table, graph, summary_table, True
 
 # Callback to show the download button only after data is processed
 @dash_app.callback(
