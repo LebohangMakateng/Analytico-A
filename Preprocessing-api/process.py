@@ -2,9 +2,8 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.wsgi import WSGIMiddleware
 import dash
-from dash import dcc, html
+from dash import dcc, html, dash_table
 from dash.dependencies import Input, Output, State
-import dash_table
 import io
 import processManager
 import pandas as pd
@@ -185,7 +184,6 @@ async def csv_to_excel_with_description(file: UploadFile = File(...)):
             processManager.create_data_sheet(df, writer)
             processManager.create_summary_sheet(df, writer)
             processManager.create_missing_values_graph_excel(df, writer)
-            processManager.create_outlier_graphs(df, writer)
 
         # Seek to the beginning of the BytesIO object
         excel_file.seek(0)
