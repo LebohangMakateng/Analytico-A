@@ -33,8 +33,13 @@ dash_app.layout = html.Div(children=[
     html.Div(id='missing-values-graph-container', style={'width': '60%','textAlign': 'center','margin': '0 auto'}),
     dcc.Store(id='data-processed', data=False),  # Store to track if data is processed
     html.Div(
-        html.Button('Download Excel File', id='download-button', n_clicks=0, style={'display': 'none'}),
-        style={'textAlign': 'center', 'marginTop': '20px'}
+        html.Button('Download Excel File', id='download-button', n_clicks=0, style={'display': 'none',}),
+        style={
+        'display': 'flex',
+        'justifyContent': 'center',
+        'alignItems': 'center',
+        'margin': '20px auto'
+    }
     ),
     dcc.Download(id='download-excel')
 ])
