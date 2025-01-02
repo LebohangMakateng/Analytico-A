@@ -28,7 +28,8 @@ dash_app.layout = html.Div(children=[
         style={'textAlign': 'center', 'marginBottom': '50px'}  
     ), 
     html.Div(id='data-table-container', style={'width': '80%','textAlign': 'center','margin': '50px auto'}),  # Container for the csv DataTable
-    html.Div(id='summary-table-container', style={'width': '80%','textAlign': 'center','margin': '0 auto'}),  
+    html.Div(id='summary-table-container', style={'width': '80%','textAlign': 'center','margin': '0 auto'}), 
+    html.Div(id='info-table-container', style={'width': '80%','textAlign': 'center','margin': '0 auto'}),  
     html.Div(id='missing-values-graph-container', style={'width': '80%','textAlign': 'center','margin': '50px auto'}),
     dcc.Store(id='data-processed', data=False),  # Store to track if data is processed
     html.Div(
@@ -48,24 +49,26 @@ dash_app.layout = html.Div(children=[
     [Output('data-table-container', 'children'),
      Output('missing-values-graph-container', 'children'),
      Output('summary-table-container', 'children'),
+     Output('info-table-container', 'children'),
      Output('data-processed', 'data')],
     [Input('upload-data', 'contents')],
     [State('upload-data', 'filename')]
 )
 def update_output(contents, filename):
     if contents is None:
-        return html.Div("Please Upload data :)",
-                        style={'textAlign': 'center',
-                               'fontWeight': 'bold',
-                               'fontSize': '20px',
-                               'marginBottom': '10px'}), None, None, False
+        return (html.Div("Please Upload data :)",
+                         style={'textAlign': 'center',
+                                'fontWeight': 'bold',
+                                'fontSize': '20px',
+                                'marginBottom': '10px'}), 
+                None, None, None, False)
 
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
     try:
         df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
     except Exception as e:
-        return html.Div(f"Error processing file: {str(e)}"), None, None, False
+        return html.Div(f"Error processing file: {str(e)}"), None, None, None, False
 
     # Create a DataTable for the uploaded data
     data_table = dash_table.DataTable(
@@ -116,7 +119,18 @@ def update_output(contents, filename):
             summary_table_content
         ])
 
-    return uploaded_data_table, graph, summary_table, True
+    # Capture the df.info() output
+    buffer = io.StringIO()
+    df.info(buf=buffer)
+    info_str = buffer.getvalue()
+
+    # Display the df.info() output
+    info_output = html.Div([
+        html.H3("Info() Data Summary Table", style={'textAlign': 'center','marginBottom':'0px'}),
+        html.Pre(info_str, style={'whiteSpace': 'pre-wrap', 'overflowX': 'auto'})
+    ]) 
+
+    return uploaded_data_table, graph, summary_table, info_output, True
 
 # Callback to show the download button only after data is processed
 @dash_app.callback(
