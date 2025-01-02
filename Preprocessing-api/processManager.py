@@ -121,3 +121,16 @@ def create_missing_values_graph_excel(df: pd.DataFrame, writer: pd.ExcelWriter) 
     worksheet.insert_image('A1', '', {'image_data': imgdata})
 
     plt.close(fig)
+
+#TODO:
+## Missing value imputation refers to replacing missing data with substituted values in a dataset.
+## Handling Missing Values using mode or a special category for categorical features
+## https://chatgpt.com/share/6771b52a-d5fc-800a-ba5c-069df7d3ff53
+## You can automate this handling for multiple categorical features in a dataset:
+##Example:
+# Replace missing values in all categorical columns
+##for column in df.select_dtypes(include=['object', 'category']).columns:
+##    # Replace with mode or a special category
+##    df[column].fillna(df[column].mode()[0], inplace=True)  # Using mode
+    # df[column].fillna('Missing', inplace=True)           # Using a special category
+##This approach works efficiently for datasets with many categorical features.
