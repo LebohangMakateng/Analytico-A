@@ -16,6 +16,7 @@ app = FastAPI()
 dash_app = dash.Dash(__name__, requests_pathname_prefix='/dash/')
 
 # Define the layout of the Dash app
+# Update the layout
 dash_app.layout = html.Div(children=[
     html.H1(children='Analytico', 
             style={'textAlign': 'center', 'marginBottom': '50px'}),
@@ -33,15 +34,26 @@ dash_app.layout = html.Div(children=[
     html.Div(id='missing-values-graph-container', style={'width': '80%','textAlign': 'center','margin': '50px auto'}),
     dcc.Store(id='data-processed', data=False),  # Store to track if data is processed
     html.Div(
-        html.Button('Download Excel File', id='download-button', n_clicks=0, style={'display': 'none',}),
+        [
+            dcc.Dropdown(
+                id='download-format',
+                options=[
+                    {'label': 'Download as Excel', 'value': 'excel'},
+                    {'label': 'Download as PDF', 'value': 'pdf'}
+                ],
+                placeholder="Select download format",
+                style={'width': '200px', 'margin-right': '10px'}
+            ),
+            html.Button('Download', id='download-button', n_clicks=0, style={'display': 'none'})
+        ],
         style={
-        'display': 'flex',
-        'justifyContent': 'center',
-        'alignItems': 'center',
-        'margin': '20px auto'
-    }
+            'display': 'flex',
+            'justifyContent': 'center',
+            'alignItems': 'center',
+            'margin': '20px auto'
+        }
     ),
-    dcc.Download(id='download-excel')
+    dcc.Download(id='download-file')
 ])
 
 # Callback to update the table and graph based on uploaded file# Callback to update the table and graph based on uploaded file
