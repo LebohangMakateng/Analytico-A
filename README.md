@@ -1,2 +1,3 @@
-# Data-Preprocessing-Pipeline
-In order to enhance the quality, consistency, and analytical usefulness of raw data, data preprocessing entails altering and transforming it. A data preparation pipeline is an automated, methodical process that integrates several preprocessing stages into a seamless workflow. 
+Analytico
+
+A RESTful API using Python with Flask that allows users to perform various data analytics tasks interactively. The API will integrate with Jupyter notebooks to execute data analysis scripts and produce interactive dashboards using popular libraries like Pandas, Plotly, and Bokeh.
