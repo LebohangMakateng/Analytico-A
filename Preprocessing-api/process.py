@@ -8,7 +8,6 @@ import io
 import processManager
 import pandas as pd
 import base64
-from fpdf import FPDF  # For PDF generation
 
 # Create the FastAPI app
 app = FastAPI()
@@ -17,7 +16,6 @@ app = FastAPI()
 dash_app = dash.Dash(__name__, requests_pathname_prefix='/dash/')
 
 # Define the layout of the Dash app
-# Update the layout
 dash_app.layout = html.Div(children=[
     html.H1(children='Analytico', 
             style={'textAlign': 'center', 'marginBottom': '50px'}),
@@ -35,26 +33,15 @@ dash_app.layout = html.Div(children=[
     html.Div(id='missing-values-graph-container', style={'width': '80%','textAlign': 'center','margin': '50px auto'}),
     dcc.Store(id='data-processed', data=False),  # Store to track if data is processed
     html.Div(
-        [
-            dcc.Dropdown(
-                id='download-format',
-                options=[
-                    {'label': 'Download as Excel', 'value': 'excel'},
-                    {'label': 'Download as PDF', 'value': 'pdf'}
-                ],
-                placeholder="Select download format",
-                style={'width': '200px', 'margin-right': '10px'}
-            ),
-            html.Button('Download', id='download-button', n_clicks=0, style={'display': 'none'})
-        ],
+        html.Button('Download Excel File', id='download-button', n_clicks=0, style={'display': 'none',}),
         style={
-            'display': 'flex',
-            'justifyContent': 'center',
-            'alignItems': 'center',
-            'margin': '20px auto'
-        }
+        'display': 'flex',
+        'justifyContent': 'center',
+        'alignItems': 'center',
+        'margin': '20px auto'
+    }
     ),
-    dcc.Download(id='download-file')
+    dcc.Download(id='download-excel')
 ])
 
 # Callback to update the table and graph based on uploaded file# Callback to update the table and graph based on uploaded file
