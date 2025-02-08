@@ -8,6 +8,7 @@ import io
 import processManager
 import pandas as pd
 import base64
+from fpdf import FPDF  # For PDF generation
 
 # Create the FastAPI app
 app = FastAPI()
