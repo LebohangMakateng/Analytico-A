@@ -30,6 +30,7 @@ dash_app.layout = html.Div(children=[
     html.Div(id='data-table-container', style={'width': '80%','textAlign': 'center','margin': '50px auto'}),  # Container for the csv DataTable
     html.Div(id='summary-table-container', style={'width': '80%','textAlign': 'center','margin': '0 auto'}), 
     html.Div(id='info-table-container', style={'width': '80%','textAlign': 'center','margin': '0 auto'}),  
+    html.Div(id='outliers-graph-container', style={'width': '80%','textAlign': 'center','margin': '50px auto'}),
     html.Div(id='missing-values-graph-container', style={'width': '80%','textAlign': 'center','margin': '50px auto'}),
     dcc.Store(id='data-processed', data=False),  # Store to track if data is processed
     html.Div(
@@ -48,6 +49,7 @@ dash_app.layout = html.Div(children=[
 @dash_app.callback(
     [Output('data-table-container', 'children'),
      Output('missing-values-graph-container', 'children'),
+     Output('outliers-graph-container', 'children'),
      Output('summary-table-container', 'children'),
      Output('info-table-container', 'children'),
      Output('data-processed', 'data')],
@@ -113,6 +115,11 @@ def update_output(contents, filename):
         summary_df = processManager.create_summary_dataframe(numerical_df)
         summary_table_content = processManager.generate_data_table(summary_df)
 
+         # Generate the graph for missing values
+        outliers_graph = dcc.Graph(
+            figure=processManager.create_outliers_graph(numerical_df)
+        )
+
         # Add the title for the summary table
         summary_table = html.Div([
             html.H3("Numerical Data Summary Table", style={'textAlign': 'center','marginBottom':'0px'}),
@@ -130,7 +137,7 @@ def update_output(contents, filename):
         html.Pre(info_str, style={'whiteSpace': 'pre-wrap', 'overflowX': 'auto'})
     ]) 
 
-    return uploaded_data_table, graph, summary_table, info_output, True
+    return uploaded_data_table, graph, outliers_graph, summary_table, info_output, True
 
 # Callback to show the download button only after data is processed
 @dash_app.callback(
