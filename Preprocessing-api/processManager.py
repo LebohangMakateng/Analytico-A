@@ -89,6 +89,37 @@ def create_missing_values_graph(df: pd.DataFrame) -> go.Figure:
 
     return fig
 
+# Function to generate the outliers graph
+def create_outliers_graph(df: pd.DataFrame) -> go.Figure:
+    """
+    Generate a Plotly box plot to visualize outliers for each numerical column.
+    """
+    # Select numerical columns
+    numerical_cols = df.select_dtypes(include=['number']).columns
+
+    # Create a box plot for each numerical column
+    fig = go.Figure()
+
+    for col in numerical_cols:
+        fig.add_trace(go.Box(
+            y=df[col],
+            name=col,
+            boxpoints='outliers',  # Show outliers only
+            marker=dict(color='red'),  # Highlight outliers in red
+            line=dict(color='blue')    # Box color
+        ))
+
+    # Update layout to enhance readability
+    fig.update_layout(
+        title='Outliers by Numerical Column',
+        yaxis_title='Values',
+        plot_bgcolor='white',  # Set plot background to white
+        paper_bgcolor='white',  # Set paper background to white
+        boxmode='group'         # Group boxes together
+    )
+
+    return fig
+
 def create_missing_values_graph_excel(df: pd.DataFrame, writer: pd.ExcelWriter) -> None:
     """
     Create a 'Missing Values' sheet with a bar graph of missing values in an Excel file.
