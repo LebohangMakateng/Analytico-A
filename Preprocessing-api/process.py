@@ -27,7 +27,7 @@ dash_app.layout = dcc.Loading(
     html.Div(
         dcc.Upload(
             id='upload-data',
-            children=html.Button('Upload CSV File'),
+            children=html.Button('Upload File'),
             multiple=False
         ),
         style={'textAlign': 'center', 'marginBottom': '50px'}  
@@ -77,7 +77,12 @@ def update_output(contents, filename):
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
     try:
-        df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+        if filename.endswith('.csv'):
+            df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+        elif filename.endswith('.xlsx') or filename.endswith('.xls'):
+            df = pd.read_excel(io.BytesIO(decoded))
+        else:
+            return "Unsupported file format."
     except Exception as e:
         return html.Div(f"Error processing file: {str(e)}"), None, None, None, False
 
