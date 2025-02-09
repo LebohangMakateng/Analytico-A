@@ -8,6 +8,7 @@ import io
 import processManager
 import pandas as pd
 import base64
+import time  # For simulating delay
 
 # Create the FastAPI app
 app = FastAPI()
@@ -99,6 +100,9 @@ def update_output(contents, filename):
                                 'fontSize': '20px',
                                 'marginBottom': '10px'}), 
                 None, None, None, False)
+    
+     # Simulate a delay (e.g., data processing)
+    time.sleep(2)  # Delay for 5 seconds
 
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
