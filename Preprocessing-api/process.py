@@ -9,12 +9,13 @@ import processManager
 import pandas as pd
 import base64
 import time  # For simulating delay
+import dash_bootstrap_components as dbc
 
 # Create the FastAPI app
 app = FastAPI()
 
 # Create the Dash app
-dash_app = dash.Dash(__name__, requests_pathname_prefix='/dash/')
+dash_app = dash.Dash(__name__, requests_pathname_prefix='/dash/', external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 dash_app.layout = dcc.Loading(
     id="loading-full-page",
@@ -27,7 +28,13 @@ dash_app.layout = dcc.Loading(
     html.Div(
         dcc.Upload(
             id='upload-data',
-            children=html.Button('Upload File'),
+    children=dbc.Button(
+        'Upload CSV/Excel File',
+        id='upload-button',
+        color="primary",  # Blue background
+        className="me-2",  # Margin
+        style={'color': 'white'}
+        ),
             multiple=False
         ),
         style={'textAlign': 'center', 'marginBottom': '50px'}  
@@ -39,7 +46,13 @@ dash_app.layout = dcc.Loading(
     html.Div(id='missing-values-graph-container', style={'width': '80%','textAlign': 'center','margin': '50px auto'}),
     dcc.Store(id='data-processed', data=False),  # Store to track if data is processed
     html.Div(
-        html.Button('Download Excel File', id='download-button', n_clicks=0, style={'display': 'none',}),
+        dbc.Button(
+        'Download Excel File',
+        id='download-button',
+        color="primary",  # Blue background
+        className="me-2",  # Margin
+        style={'color': 'white', 'display':'none'}
+    ),
         style={
         'display': 'flex',
         'justifyContent': 'center',
