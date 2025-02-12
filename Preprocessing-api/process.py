@@ -112,7 +112,9 @@ def update_output(contents, filename):
     uploaded_data_table = html.Div([
         html.H3(f"Data Table: {filename}", style={'textAlign': 'center', 'marginBottom':'5px'}),
         data_table
-    ])
+    ], 
+    style= card_style
+    )
 
     # Check if the DataFrame is empty or has no missing values
     if df.empty or df.isnull().sum().sum() == 0:
@@ -124,7 +126,7 @@ def update_output(contents, filename):
     else:
         # Generate the graph for missing values
         graph = dcc.Graph(
-            figure=processManager.create_missing_values_graph(df)
+            figure=processManager.create_missing_values_graph(df), style= card_style
         )
 
     # Filter numerical columns
@@ -144,14 +146,14 @@ def update_output(contents, filename):
 
          # Generate the graph for missing values
         outliers_graph = dcc.Graph(
-            figure=processManager.create_outliers_graph(numerical_df)
+            figure=processManager.create_outliers_graph(numerical_df), style= card_style
         )
 
         # Add the title for the summary table
         summary_table = html.Div([
             html.H3("Numerical Data Summary Table", style={'textAlign': 'center','marginBottom':'0px'}),
             summary_table_content
-        ])
+        ], style= card_style)
 
     # Capture the df.info() output
     buffer = io.StringIO()
@@ -162,7 +164,7 @@ def update_output(contents, filename):
     info_output = html.Div([
         html.H3("Info() Data Summary Table", style={'textAlign': 'center','marginBottom':'0px'}),
         html.Pre(info_str, style={'whiteSpace': 'pre-wrap', 'overflowX': 'auto'})
-    ]) 
+    ], style= card_style) 
 
     return uploaded_data_table, graph, outliers_graph, summary_table, info_output, True
 
@@ -250,3 +252,14 @@ async def csv_to_excel_with_description(file: UploadFile = File(...)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+    
+# Define the card style
+card_style = {
+    'border': '1px solid #ddd',
+    'border-radius': '10px',
+    'box-shadow': '0 4px 8px rgba(0, 0, 0, 0.2)',
+    'padding': '20px',
+    'background-color': '#fff',
+    'margin': '20px auto',
+    'width': '90%',
+}
