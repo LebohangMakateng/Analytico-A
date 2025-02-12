@@ -39,11 +39,11 @@ dash_app.layout = dcc.Loading(
         ),
         style={'textAlign': 'center', 'marginBottom': '50px'}  
     ), 
-    html.Div(id='data-table-container', style={'width': '80%','textAlign': 'center','margin': '50px auto'}),  # Container for the csv DataTable
-    html.Div(id='summary-table-container', style={'width': '80%','textAlign': 'center','margin': '0 auto'}), 
-    html.Div(id='info-table-container', style={'width': '80%','textAlign': 'center','margin': '0 auto'}),  
-    html.Div(id='outliers-graph-container', style={'width': '80%','textAlign': 'center','margin': '50px auto'}),
-    html.Div(id='missing-values-graph-container', style={'width': '80%','textAlign': 'center','margin': '50px auto'}),
+    html.Div(id='data-table-container', style={'textAlign': 'center','margin': '50px auto'}),  # Container for the csv DataTable
+    html.Div(id='summary-table-container', style={'textAlign': 'center','margin': '50px auto'}), 
+    html.Div(id='info-table-container', style={'textAlign': 'center','margin': '50px auto'}),  
+    html.Div(id='outliers-graph-container', style={'textAlign': 'center','margin': '50px auto'}),
+    html.Div(id='missing-values-graph-container', style={'textAlign': 'center','margin': '50px auto'}),
     dcc.Store(id='data-processed', data=False),  # Store to track if data is processed
     html.Div(
         dbc.Button(
