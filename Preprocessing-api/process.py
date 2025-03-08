@@ -9,7 +9,7 @@ import io
 import processManager
 import pandas as pd
 import base64
-import time  # For simulating delay
+import time
 import dash_bootstrap_components as dbc
 from openai import OpenAI
 import os
@@ -17,6 +17,22 @@ import os
 
 # Create the FastAPI app
 app = FastAPI()
+
+# Initialize OpenAI client
+client = OpenAI(api_key=Settings.OPENAI_API_KEY)
+# Validate settings on startup
+Settings.validate_settings()
+
+# Define the card style
+card_style = {
+    'border': '1px solid #ddd',
+    'border-radius': '10px',
+    'box-shadow': '0 4px 8px rgba(0, 0, 0, 0.2)',
+    'padding': '20px',
+    'background-color': '#fff',
+    'margin': '20px auto',
+    'width': '90%',
+}
 
 # Create the Dash app
 dash_app = dash.Dash(__name__, requests_pathname_prefix='/dash/', external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -28,49 +44,57 @@ dash_app.layout = dcc.Loading(
         # Your existing layout here
         html.H1(children='Analytico', 
             style={'textAlign': 'center', 'marginBottom': '50px'}),
-    html.Div(
-        dcc.Upload(
-            id='upload-data',
-    children=dbc.Button(
-        'Upload CSV/Excel File',
-        id='upload-button',
-        color="primary",  # Blue background
-        className="me-2",  # Margin
-        style={'color': 'white'}
+        html.Div(
+            dcc.Upload(
+                id='upload-data',
+                children=dbc.Button(
+                    'Upload CSV/Excel File',
+                    id='upload-button',
+                    color="primary",  # Blue background
+                    className="me-2",  # Margin
+                    style={'color': 'white'}
+                ),
+                multiple=False
+            ),
+            style={'textAlign': 'center', 'marginBottom': '50px'}  
+        ), 
+        html.Div(id='data-table-container', style={'textAlign': 'center','margin': '50px auto'}),  # Container for the csv DataTable
+        html.Div(id='summary-table-container', style={'textAlign': 'center','margin': '50px auto'}), 
+        html.Div(id='info-table-container', style={'textAlign': 'center','margin': '50px auto'}),  
+        html.Div(id='outliers-graph-container', style={'textAlign': 'center','margin': '50px auto'}),
+        html.Div(id='missing-values-graph-container', style={'textAlign': 'center','margin': '50px auto'}),
+        html.Div(id='ai-insights-container', style={'textAlign': 'center', 'margin': '50px auto'}),
+        # Add natural language query section
+        html.Div([
+            dbc.Input(
+                id='natural-language-query',
+                type='text',
+                placeholder='Ask questions about your data (e.g., "What are the top selling products?" or "Show me unusual patterns")',
+                style={'marginBottom': '10px', 'width': '100%'}
+            ),
+            dbc.Button('Ask Question', id='query-button', color='primary', className='me-2')
+        ], style={'width': '90%', 'margin': '20px auto'}),
+        html.Div(id='query-result-container', style={'textAlign': 'center', 'margin': '20px auto'}),
+        dcc.Store(id='data-processed', data=False),  # Store to track if data is processed
+        dcc.Store(id='stored-data', data=None),  # Store the processed data for reuse
+        html.Div(
+            dbc.Button(
+                'Download Excel File',
+                id='download-button',
+                color="primary",  # Blue background
+                className="me-2",  # Margin
+                style={'color': 'white', 'display':'none'}
+            ),
+            style={
+                'display': 'flex',
+                'justifyContent': 'center',
+                'alignItems': 'center',
+                'margin': '20px auto'
+            }
         ),
-            multiple=False
-        ),
-        style={'textAlign': 'center', 'marginBottom': '50px'}  
-    ), 
-    html.Div(id='data-table-container', style={'textAlign': 'center','margin': '50px auto'}),  # Container for the csv DataTable
-    html.Div(id='summary-table-container', style={'textAlign': 'center','margin': '50px auto'}), 
-    html.Div(id='info-table-container', style={'textAlign': 'center','margin': '50px auto'}),  
-    html.Div(id='outliers-graph-container', style={'textAlign': 'center','margin': '50px auto'}),
-    html.Div(id='missing-values-graph-container', style={'textAlign': 'center','margin': '50px auto'}),
-    dcc.Store(id='data-processed', data=False),  # Store to track if data is processed
-    html.Div(
-        dbc.Button(
-        'Download Excel File',
-        id='download-button',
-        color="primary",  # Blue background
-        className="me-2",  # Margin
-        style={'color': 'white', 'display':'none'}
-    ),
-        style={
-        'display': 'flex',
-        'justifyContent': 'center',
-        'alignItems': 'center',
-        'margin': '20px auto'
-    }
-    ),
-    dcc.Download(id='download-excel')
+        dcc.Download(id='download-excel')
     ])
 )
-
-# Initialize OpenAI client
-client = OpenAI(api_key=Settings.OPENAI_API_KEY)
-#Validate settings on startup
-Settings.validate_settings()
 
 # Add this function to generate insights
 def generate_data_insights(df):
@@ -98,8 +122,27 @@ def generate_data_insights(df):
     except Exception as e:
         return f"Unable to generate insights: {str(e)}"
 
-# Callback to update the table and graph based on uploaded file# Callback to update the table and graph based on uploaded file
-# Modify the update_output callback to include AI insights
+# Function to parse uploaded file data
+def parse_uploaded_file(contents, filename):
+    if contents is None:
+        return None, "No file uploaded"
+    
+    try:
+        content_type, content_string = contents.split(',')
+        decoded = base64.b64decode(content_string)
+        
+        if filename.endswith('.csv'):
+            df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+        elif filename.endswith('.xlsx') or filename.endswith('.xls'):
+            df = pd.read_excel(io.BytesIO(decoded))
+        else:
+            return None, "Unsupported file format. Please upload CSV or Excel files."
+        
+        return df, None
+    except Exception as e:
+        return None, f"Error processing file: {str(e)}"
+
+# Callback to update the table and graph based on uploaded file
 @dash_app.callback(
     [Output('data-table-container', 'children'),
      Output('missing-values-graph-container', 'children'),
@@ -107,7 +150,8 @@ def generate_data_insights(df):
      Output('summary-table-container', 'children'),
      Output('info-table-container', 'children'),
      Output('ai-insights-container', 'children'),
-     Output('data-processed', 'data')],
+     Output('data-processed', 'data'),
+     Output('stored-data', 'data')],
     [Input('upload-data', 'contents')],
     [State('upload-data', 'filename')]
 )
@@ -118,22 +162,12 @@ def update_output(contents, filename):
                              'fontWeight': 'bold',
                              'fontSize': '20px',
                              'marginBottom': '10px'}
-                       ), None, None, None, None, None, False
+                       ), None, None, None, None, None, False, None
     
-     # Simulate a delay (e.g., data processing)
-    time.sleep(2)  # Delay for 5 seconds
-
-    content_type, content_string = contents.split(',')
-    decoded = base64.b64decode(content_string)
-    try:
-        if filename.endswith('.csv'):
-            df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
-        elif filename.endswith('.xlsx') or filename.endswith('.xls'):
-            df = pd.read_excel(io.BytesIO(decoded))
-        else:
-            return html.Div("Unsupported file format."), None, None, None, None, None, False
-    except Exception as e:
-        return html.Div(f"Error processing file: {str(e)}"), None, None, None, None, None, False
+    # Parse the uploaded file
+    df, error_message = parse_uploaded_file(contents, filename)
+    if df is None:
+        return html.Div(error_message), None, None, None, None, None, False, None
 
     # Create a DataTable for the uploaded data
     data_table = dash_table.DataTable(
@@ -148,29 +182,36 @@ def update_output(contents, filename):
     uploaded_data_table = html.Div([
         html.H3(f"Data Table: {filename}", style={'textAlign': 'center', 'marginBottom':'5px'}),
         data_table
-    ], 
-    style= card_style
-    )
-    html.Div(id='ai-insights-container', style={'textAlign': 'center', 'margin': '50px auto'}),
+    ], style=card_style)
+    
     # Check if the DataFrame is empty or has no missing values
     if df.empty or df.isnull().sum().sum() == 0:
-        graph = html.Div("No missing values found in the uploaded file.",
+        missing_values_graph = html.Div("No missing values found in the uploaded file.",
                          style={'textAlign': 'center',
                                 'fontWeight': 'bold',
                                 'fontSize': '20px',
                                 'marginBottom': '10px'})
     else:
         # Generate the graph for missing values
-        graph = dcc.Graph(
-            figure=processManager.create_missing_values_graph(df), style= card_style
+        missing_values_graph = dcc.Graph(
+            figure=processManager.create_missing_values_graph(df), style=card_style
         )
 
     # Filter numerical columns
     numerical_df = df.select_dtypes(include=['number'])
 
+    # Initialize variables
+    summary_table = None
+    outliers_graph = None
+
     # Check if numerical_df is empty
     if numerical_df.empty:
         summary_table = html.Div("No numerical columns found in the uploaded file.",
+                                 style={'textAlign': 'center',
+                                        'fontWeight': 'bold',
+                                        'fontSize': '20px',
+                                        'marginBottom': '10px'})
+        outliers_graph = html.Div("No numerical columns for outlier detection.",
                                  style={'textAlign': 'center',
                                         'fontWeight': 'bold',
                                         'fontSize': '20px',
@@ -180,16 +221,16 @@ def update_output(contents, filename):
         summary_df = processManager.create_summary_dataframe(numerical_df)
         summary_table_content = processManager.generate_data_table(summary_df)
 
-         # Generate the graph for missing values
+        # Generate the graph for outliers
         outliers_graph = dcc.Graph(
-            figure=processManager.create_outliers_graph(numerical_df), style= card_style
+            figure=processManager.create_outliers_graph(numerical_df), style=card_style
         )
 
         # Add the title for the summary table
         summary_table = html.Div([
             html.H3("Numerical Data Summary Table", style={'textAlign': 'center','marginBottom':'0px'}),
             summary_table_content
-        ], style= card_style)
+        ], style=card_style)
 
     # Capture the df.info() output
     buffer = io.StringIO()
@@ -200,7 +241,7 @@ def update_output(contents, filename):
     info_output = html.Div([
         html.H3("Info() Data Summary Table", style={'textAlign': 'center','marginBottom':'0px'}),
         html.Pre(info_str, style={'whiteSpace': 'pre-wrap', 'overflowX': 'auto'})
-    ], style= card_style) 
+    ], style=card_style) 
 
     # Generate AI insights
     insights = generate_data_insights(df)
@@ -211,51 +252,49 @@ def update_output(contents, filename):
             for insight in insights.split('\n') if insight.strip()
         ])
     ], style=card_style)
-    # Add this near other layout components
-    html.Div([
-        dbc.Input(
-            id='natural-language-query',
-            type='text',
-            placeholder='Ask questions about your data (e.g., "What are the top selling products?" or "Show me unusual patterns")',
-            style={'marginBottom': '10px', 'width': '100%'}
-        ),
-        dbc.Button('Ask Question', id='query-button', color='primary', className='me-2')
-    ], style={'width': '90%', 'margin': '20px auto'}),
-    html.Div(id='query-result-container', style={'textAlign': 'center', 'margin': '20px auto'}),
     
-    # Add this callback for handling natural language queries
-    @dash_app.callback(
-        Output('query-result-container', 'children'),
-        [Input('query-button', 'n_clicks')],
-        [State('natural-language-query', 'value'),
-         State('upload-data', 'contents')]
-    )
-    def handle_query(n_clicks, query, contents):
-        if not n_clicks or not query or not contents:
-            return None
-        
-        # Process the uploaded data
-        content_type, content_string = contents.split(',')
-        decoded = base64.b64decode(content_string)
-        df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
-        
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are a data analyst. Analyze the data and answer questions in simple business terms."},
-                    {"role": "user", "content": f"Data:\n{df.head(10)}\n\nQuestion: {query}"}
-                ]
-            )
-            
-            return html.Div([
-                html.H4("Answer", style={'marginBottom': '10px'}),
-                html.P(response.choices[0].message.content)
-            ], style=card_style)
-        except Exception as e:
-            return html.Div(f"Error processing query: {str(e)}", style=card_style)
-        return uploaded_data_table, graph, outliers_graph, summary_table, info_output, insights_output, True
+    # Store the data as JSON for later use
+    stored_data = df.to_json(date_format='iso', orient='split')
+    
+    return uploaded_data_table, missing_values_graph, outliers_graph, summary_table, info_output, insights_output, True, stored_data
 
+# Callback for handling natural language queries
+@dash_app.callback(
+    Output('query-result-container', 'children'),
+    [Input('query-button', 'n_clicks')],
+    [State('natural-language-query', 'value'),
+     State('stored-data', 'data')]
+)
+def handle_query(n_clicks, query, stored_data):
+    if not n_clicks or not query or not stored_data:
+        return None
+    
+    try:
+        # Convert the stored JSON data back to DataFrame
+        df = pd.read_json(stored_data, orient='split')
+        
+        # Validate input query
+        if not query.strip():
+            return html.Div("Please enter a valid query", style=card_style)
+        
+        # Prepare data context (limit to avoid API overload)
+        data_context = df.head(10).to_string()
+        column_info = f"Columns: {', '.join(df.columns)}\nRows: {len(df)}"
+        
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a data analyst. Analyze the data and answer questions in simple business terms."},
+                {"role": "user", "content": f"Data information:\n{column_info}\nSample data:\n{data_context}\n\nQuestion: {query}"}
+            ]
+        )
+        
+        return html.Div([
+            html.H4(f"Answer to: {query}", style={'marginBottom': '10px'}),
+            html.P(response.choices[0].message.content)
+        ], style=card_style)
+    except Exception as e:
+        return html.Div(f"Error processing query: {str(e)}", style=card_style)
 
 # Callback to show the download button only after data is processed
 @dash_app.callback(
@@ -264,24 +303,23 @@ def update_output(contents, filename):
 )
 def toggle_download_button(data_processed):
     if data_processed:
-        return {'display': 'block'}
+        return {'display': 'block', 'color': 'white'}
     return {'display': 'none'}
 
 # Callback to handle the download button click
 @dash_app.callback(
     Output('download-excel', 'data'),
     [Input('download-button', 'n_clicks')],
-    [State('upload-data', 'contents'), State('upload-data', 'filename')]
+    [State('stored-data', 'data'), State('upload-data', 'filename')]
 )
-def download_excel(n_clicks, contents, filename):
-    if not n_clicks:  # Handle None case
+def download_excel(n_clicks, stored_data, filename):
+    if not n_clicks or not stored_data or not filename:  # Handle None case
         return None
         
-    if contents is not None:
-        content_type, content_string = contents.split(',')
-        decoded = base64.b64decode(content_string)
-        df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
-
+    try:
+        # Convert the stored JSON data back to DataFrame
+        df = pd.read_json(stored_data, orient='split')
+        
         # Create a BytesIO object to store the Excel file
         excel_file = io.BytesIO()
 
@@ -298,8 +336,10 @@ def download_excel(n_clicks, contents, filename):
         excel_filename = filename.rsplit('.', 1)[0] + '_preprocessed.xlsx'
 
         return dcc.send_bytes(excel_file.getvalue(), filename=excel_filename)
-
-    return None
+    except Exception as e:
+        # Log the error (would be better with proper logging)
+        print(f"Error generating Excel: {str(e)}")
+        return None
 
 # Mount the Dash app on a specific route
 app.mount("/dash", WSGIMiddleware(dash_app.server))
@@ -344,7 +384,6 @@ async def csv_to_excel_with_description(file: UploadFile = File(...)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
-    
 # Define the card style
 card_style = {
     'border': '1px solid #ddd',
