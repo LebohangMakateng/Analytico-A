@@ -106,19 +106,19 @@ def generate_data_insights(df):
      Output('outliers-graph-container', 'children'),
      Output('summary-table-container', 'children'),
      Output('info-table-container', 'children'),
-     Output('ai-insights-container', 'children'),  # New output
+     Output('ai-insights-container', 'children'),
      Output('data-processed', 'data')],
     [Input('upload-data', 'contents')],
     [State('upload-data', 'filename')]
 )
 def update_output(contents, filename):
     if contents is None:
-        return (html.Div("Please Upload data :)",
-                         style={'textAlign': 'center',
-                                'fontWeight': 'bold',
-                                'fontSize': '20px',
-                                'marginBottom': '10px'}), 
-                None, None, None, False)
+        return html.Div("Please Upload data :)",
+                       style={'textAlign': 'center',
+                             'fontWeight': 'bold',
+                             'fontSize': '20px',
+                             'marginBottom': '10px'}
+                       ), None, None, None, None, None, False
     
      # Simulate a delay (e.g., data processing)
     time.sleep(2)  # Delay for 5 seconds
@@ -131,9 +131,9 @@ def update_output(contents, filename):
         elif filename.endswith('.xlsx') or filename.endswith('.xls'):
             df = pd.read_excel(io.BytesIO(decoded))
         else:
-            return "Unsupported file format."
+            return html.Div("Unsupported file format."), None, None, None, None, None, False
     except Exception as e:
-        return html.Div(f"Error processing file: {str(e)}"), None, None, None, False
+        return html.Div(f"Error processing file: {str(e)}"), None, None, None, None, None, False
 
     # Create a DataTable for the uploaded data
     data_table = dash_table.DataTable(
@@ -254,7 +254,8 @@ def update_output(contents, filename):
             ], style=card_style)
         except Exception as e:
             return html.Div(f"Error processing query: {str(e)}", style=card_style)
-    return uploaded_data_table, graph, outliers_graph, summary_table, info_output, insights_output, True
+        return uploaded_data_table, graph, outliers_graph, summary_table, info_output, insights_output, True
+
 
 # Callback to show the download button only after data is processed
 @dash_app.callback(
