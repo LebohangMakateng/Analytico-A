@@ -1,3 +1,4 @@
+from config import Settings
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.wsgi import WSGIMiddleware
@@ -12,6 +13,7 @@ import time  # For simulating delay
 import dash_bootstrap_components as dbc
 from openai import OpenAI
 import os
+
 
 # Create the FastAPI app
 app = FastAPI()
@@ -66,7 +68,9 @@ dash_app.layout = dcc.Loading(
 )
 
 # Initialize OpenAI client
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+client = OpenAI(api_key=Settings.OPENAI_API_KEY)
+#Validate settings on startup
+Settings.validate_settings()
 
 # Add this function to generate insights
 def generate_data_insights(df):
@@ -269,7 +273,10 @@ def toggle_download_button(data_processed):
     [State('upload-data', 'contents'), State('upload-data', 'filename')]
 )
 def download_excel(n_clicks, contents, filename):
-    if n_clicks > 0 and contents is not None:
+    if not n_clicks:  # Handle None case
+        return None
+        
+    if contents is not None:
         content_type, content_string = contents.split(',')
         decoded = base64.b64decode(content_string)
         df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
