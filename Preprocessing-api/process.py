@@ -10,6 +10,8 @@ import pandas as pd
 import base64
 import time  # For simulating delay
 import dash_bootstrap_components as dbc
+from openai import OpenAI
+import os
 
 # Create the FastAPI app
 app = FastAPI()
@@ -64,6 +66,35 @@ dash_app.layout = dcc.Loading(
     ])
 )
 
+# Initialize OpenAI client
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+# Add this function to generate insights
+def generate_data_insights(df):
+    # Create a context about the data
+    data_description = f"""
+    This dataset contains {len(df)} rows and {len(df.columns)} columns.
+    Columns: {', '.join(df.columns)}
+    
+    Key statistics:
+    {df.describe().to_string()}
+    
+    Missing values:
+    {df.isnull().sum().to_string()}
+    """
+    
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a helpful data analyst assistant. Analyze the data and provide clear, actionable insights for non-technical business users."},
+                {"role": "user", "content": f"Please analyze this data and provide business-friendly insights:\n{data_description}"}
+            ]
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Unable to generate insights: {str(e)}"
+
 # Callback to update the table and graph based on uploaded file# Callback to update the table and graph based on uploaded file
 @dash_app.callback(
     [Output('data-table-container', 'children'),
@@ -71,6 +102,7 @@ dash_app.layout = dcc.Loading(
      Output('outliers-graph-container', 'children'),
      Output('summary-table-container', 'children'),
      Output('info-table-container', 'children'),
+     Output('ai-insights-container', 'children'),  # New output
      Output('data-processed', 'data')],
     [Input('upload-data', 'contents')],
     [State('upload-data', 'filename')]
@@ -166,7 +198,17 @@ def update_output(contents, filename):
         html.Pre(info_str, style={'whiteSpace': 'pre-wrap', 'overflowX': 'auto'})
     ], style= card_style) 
 
-    return uploaded_data_table, graph, outliers_graph, summary_table, info_output, True
+    # Generate AI insights
+    insights = generate_data_insights(df)
+    insights_output = html.Div([
+        html.H3("AI-Powered Insights", style={'textAlign': 'center', 'marginBottom': '10px'}),
+        html.Div([
+            html.P(insight, style={'marginBottom': '10px'}) 
+            for insight in insights.split('\n') if insight.strip()
+        ])
+    ], style=card_style)
+
+    return uploaded_data_table, graph, outliers_graph, summary_table, info_output, insights_output, True
 
 # Callback to show the download button only after data is processed
 @dash_app.callback(
