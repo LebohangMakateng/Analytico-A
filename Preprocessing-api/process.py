@@ -18,7 +18,6 @@ app = FastAPI()
 
 # Create the Dash app
 dash_app = dash.Dash(__name__, requests_pathname_prefix='/dash/', external_stylesheets=[dbc.themes.BOOTSTRAP])
-
 dash_app.layout = dcc.Loading(
     id="loading-full-page",
     type="default",
@@ -96,6 +95,7 @@ def generate_data_insights(df):
         return f"Unable to generate insights: {str(e)}"
 
 # Callback to update the table and graph based on uploaded file# Callback to update the table and graph based on uploaded file
+# Modify the update_output callback to include AI insights
 @dash_app.callback(
     [Output('data-table-container', 'children'),
      Output('missing-values-graph-container', 'children'),
@@ -147,7 +147,7 @@ def update_output(contents, filename):
     ], 
     style= card_style
     )
-
+    html.Div(id='ai-insights-container', style={'textAlign': 'center', 'margin': '50px auto'}),
     # Check if the DataFrame is empty or has no missing values
     if df.empty or df.isnull().sum().sum() == 0:
         graph = html.Div("No missing values found in the uploaded file.",
@@ -207,7 +207,49 @@ def update_output(contents, filename):
             for insight in insights.split('\n') if insight.strip()
         ])
     ], style=card_style)
-
+    # Add this near other layout components
+    html.Div([
+        dbc.Input(
+            id='natural-language-query',
+            type='text',
+            placeholder='Ask questions about your data (e.g., "What are the top selling products?" or "Show me unusual patterns")',
+            style={'marginBottom': '10px', 'width': '100%'}
+        ),
+        dbc.Button('Ask Question', id='query-button', color='primary', className='me-2')
+    ], style={'width': '90%', 'margin': '20px auto'}),
+    html.Div(id='query-result-container', style={'textAlign': 'center', 'margin': '20px auto'}),
+    
+    # Add this callback for handling natural language queries
+    @dash_app.callback(
+        Output('query-result-container', 'children'),
+        [Input('query-button', 'n_clicks')],
+        [State('natural-language-query', 'value'),
+         State('upload-data', 'contents')]
+    )
+    def handle_query(n_clicks, query, contents):
+        if not n_clicks or not query or not contents:
+            return None
+        
+        # Process the uploaded data
+        content_type, content_string = contents.split(',')
+        decoded = base64.b64decode(content_string)
+        df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+        
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are a data analyst. Analyze the data and answer questions in simple business terms."},
+                    {"role": "user", "content": f"Data:\n{df.head(10)}\n\nQuestion: {query}"}
+                ]
+            )
+            
+            return html.Div([
+                html.H4("Answer", style={'marginBottom': '10px'}),
+                html.P(response.choices[0].message.content)
+            ], style=card_style)
+        except Exception as e:
+            return html.Div(f"Error processing query: {str(e)}", style=card_style)
     return uploaded_data_table, graph, outliers_graph, summary_table, info_output, insights_output, True
 
 # Callback to show the download button only after data is processed
