@@ -120,8 +120,6 @@ def generate_data_insights(df):
         )
         return response.choices[0].message.content
     except Exception as e:
-        if "insufficient_quota" in str(e):
-            return "AI Insights temporarily unavailable - OpenAI API quota exceeded. Please check your API key billing status."
         return f"Unable to generate insights: {str(e)}"
 
 # Function to parse uploaded file data
