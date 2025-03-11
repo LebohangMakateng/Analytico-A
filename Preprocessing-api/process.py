@@ -112,7 +112,7 @@ def generate_data_insights(df):
     
     try:
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",  # Changed from "gpt-4" to "gpt-3.5-turbo"
             messages=[
                 {"role": "system", "content": "You are a helpful data analyst assistant. Analyze the data and provide clear, actionable insights for non-technical business users."},
                 {"role": "user", "content": f"Please analyze this data and provide business-friendly insights:\n{data_description}"}
@@ -120,6 +120,8 @@ def generate_data_insights(df):
         )
         return response.choices[0].message.content
     except Exception as e:
+        if "insufficient_quota" in str(e):
+            return "AI Insights temporarily unavailable - OpenAI API quota exceeded. Please check your API key billing status."
         return f"Unable to generate insights: {str(e)}"
 
 # Function to parse uploaded file data
@@ -282,7 +284,7 @@ def handle_query(n_clicks, query, stored_data):
         column_info = f"Columns: {', '.join(df.columns)}\nRows: {len(df)}"
         
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",  # Changed from "gpt-4" to "gpt-3.5-turbo"
             messages=[
                 {"role": "system", "content": "You are a data analyst. Analyze the data and answer questions in simple business terms."},
                 {"role": "user", "content": f"Data information:\n{column_info}\nSample data:\n{data_context}\n\nQuestion: {query}"}
@@ -294,7 +296,8 @@ def handle_query(n_clicks, query, stored_data):
             html.P(response.choices[0].message.content)
         ], style=card_style)
     except Exception as e:
-        return html.Div(f"Error processing query: {str(e)}", style=card_style)
+        error_message = "AI Query feature temporarily unavailable - OpenAI API quota exceeded. Please check your API key billing status." if "insufficient_quota" in str(e) else f"Error processing query: {str(e)}"
+        return html.Div(error_message, style=card_style)
 
 # Callback to show the download button only after data is processed
 @dash_app.callback(
