@@ -64,7 +64,7 @@ dash_app.layout = dcc.Loading(
         html.Div(id='outliers-graph-container', style={'textAlign': 'center','margin': '50px auto'}),
         html.Div(id='missing-values-graph-container', style={'textAlign': 'center','margin': '50px auto'}),
         html.Div(id='ai-insights-container', style={'textAlign': 'center', 'margin': '50px auto'}),
-        # Add natural language query section
+        # Natural language query section
         html.Div([
             dbc.Input(
                 id='natural-language-query',
@@ -73,7 +73,7 @@ dash_app.layout = dcc.Loading(
                 style={'marginBottom': '10px', 'width': '100%'}
             ),
             dbc.Button('Ask Question', id='query-button', color='primary', className='me-2')
-        ], style={'width': '90%', 'margin': '20px auto'}),
+        ], style={'width': '90%', 'margin': '20px auto', 'display': 'none'}, id='query-section'),
         html.Div(id='query-result-container', style={'textAlign': 'center', 'margin': '20px auto'}),
         dcc.Store(id='data-processed', data=False),  # Store to track if data is processed
         dcc.Store(id='stored-data', data=None),  # Store the processed data for reuse
@@ -305,6 +305,16 @@ def toggle_download_button(data_processed):
     if data_processed:
         return {'display': 'block', 'color': 'white'}
     return {'display': 'none'}
+
+# Callback to show/hide the query section
+@dash_app.callback(
+    Output('query-section', 'style'),
+    [Input('data-processed', 'data')]
+)
+def toggle_query_section(data_processed):
+    if data_processed:
+        return {'width': '90%', 'margin': '20px auto', 'display': 'block'}
+    return {'width': '90%', 'margin': '20px auto', 'display': 'none'}
 
 # Callback to handle the download button click
 @dash_app.callback(
