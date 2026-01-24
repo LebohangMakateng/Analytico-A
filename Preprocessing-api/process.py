@@ -11,6 +11,17 @@ import base64
 import time  # For simulating delay
 import dash_bootstrap_components as dbc
 
+# Define the card style
+card_style = {
+    'border': '1px solid #ddd',
+    'border-radius': '10px',
+    'box-shadow': '0 4px 8px rgba(0, 0, 0, 0.2)',
+    'padding': '20px',
+    'background-color': '#fff',
+    'margin': '20px auto',
+    'width': '90%',
+}
+
 # Create the FastAPI app
 app = FastAPI()
 
@@ -252,14 +263,3 @@ async def csv_to_excel_with_description(file: UploadFile = File(...)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
-    
-# Define the card style
-card_style = {
-    'border': '1px solid #ddd',
-    'border-radius': '10px',
-    'box-shadow': '0 4px 8px rgba(0, 0, 0, 0.2)',
-    'padding': '20px',
-    'background-color': '#fff',
-    'margin': '20px auto',
-    'width': '90%',
-}
